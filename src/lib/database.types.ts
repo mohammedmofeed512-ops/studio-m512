@@ -1,6 +1,5 @@
 // Generated from the Supabase schema (phase 1 tables). Regenerate with:
 //   npx supabase gen types typescript --project-id qpccdnhznxtwklctyzgz > src/lib/database.types.ts
-// Later phases add shoot days and call sheets here.
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -15,6 +14,7 @@ type Enums = {
   element_category:
     | "cast" | "extras" | "props" | "wardrobe" | "makeup" | "vehicles" | "animals"
     | "sfx" | "vfx" | "sound" | "set_dressing" | "location" | "other";
+  recipient_status: "pending" | "sent" | "opened" | "confirmed";
 };
 
 export type Database = {
@@ -155,6 +155,68 @@ export type Database = {
           { foreignKeyName: "lookbook_items_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "projects"; referencedColumns: ["id"] },
         ];
       };
+      shoot_days: {
+        Row: {
+          created_at: string; day_number: number; general_call: string | null; id: string; location_contact_id: string | null;
+          owner_id: string; project_id: string; shoot_date: string | null; updated_at: string; wrap_time: string | null;
+        };
+        Insert: {
+          created_at?: string; day_number: number; general_call?: string | null; id?: string; location_contact_id?: string | null;
+          owner_id?: string; project_id: string; shoot_date?: string | null; updated_at?: string; wrap_time?: string | null;
+        };
+        Update: {
+          created_at?: string; day_number?: number; general_call?: string | null; id?: string; location_contact_id?: string | null;
+          owner_id?: string; project_id?: string; shoot_date?: string | null; updated_at?: string; wrap_time?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: "shoot_days_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "projects"; referencedColumns: ["id"] },
+          { foreignKeyName: "shoot_days_location_contact_id_fkey"; columns: ["location_contact_id"]; isOneToOne: false; referencedRelation: "contacts"; referencedColumns: ["id"] },
+        ];
+      };
+      shoot_day_scenes: {
+        Row: { owner_id: string; position: number; scene_id: string; shoot_day_id: string };
+        Insert: { owner_id?: string; position?: number; scene_id: string; shoot_day_id: string };
+        Update: { owner_id?: string; position?: number; scene_id?: string; shoot_day_id?: string };
+        Relationships: [
+          { foreignKeyName: "shoot_day_scenes_shoot_day_id_fkey"; columns: ["shoot_day_id"]; isOneToOne: false; referencedRelation: "shoot_days"; referencedColumns: ["id"] },
+          { foreignKeyName: "shoot_day_scenes_scene_id_fkey"; columns: ["scene_id"]; isOneToOne: false; referencedRelation: "scenes"; referencedColumns: ["id"] },
+        ];
+      };
+      call_sheets: {
+        Row: {
+          created_at: string; general_notes: string | null; id: string; nearest_hospital: string | null; owner_id: string;
+          sent_at: string | null; shoot_day_id: string; updated_at: string; weather: string | null;
+        };
+        Insert: {
+          created_at?: string; general_notes?: string | null; id?: string; nearest_hospital?: string | null; owner_id?: string;
+          sent_at?: string | null; shoot_day_id: string; updated_at?: string; weather?: string | null;
+        };
+        Update: {
+          created_at?: string; general_notes?: string | null; id?: string; nearest_hospital?: string | null; owner_id?: string;
+          sent_at?: string | null; shoot_day_id?: string; updated_at?: string; weather?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: "call_sheets_shoot_day_id_fkey"; columns: ["shoot_day_id"]; isOneToOne: true; referencedRelation: "shoot_days"; referencedColumns: ["id"] },
+        ];
+      };
+      call_sheet_recipients: {
+        Row: {
+          call_sheet_id: string; call_time: string | null; confirmed_at: string | null; contact_id: string; id: string; opened_at: string | null;
+          owner_id: string; personal_note: string | null; status: Enums["recipient_status"]; token: string;
+        };
+        Insert: {
+          call_sheet_id: string; call_time?: string | null; confirmed_at?: string | null; contact_id: string; id?: string; opened_at?: string | null;
+          owner_id?: string; personal_note?: string | null; status?: Enums["recipient_status"]; token?: string;
+        };
+        Update: {
+          call_sheet_id?: string; call_time?: string | null; confirmed_at?: string | null; contact_id?: string; id?: string; opened_at?: string | null;
+          owner_id?: string; personal_note?: string | null; status?: Enums["recipient_status"]; token?: string;
+        };
+        Relationships: [
+          { foreignKeyName: "call_sheet_recipients_call_sheet_id_fkey"; columns: ["call_sheet_id"]; isOneToOne: false; referencedRelation: "call_sheets"; referencedColumns: ["id"] },
+          { foreignKeyName: "call_sheet_recipients_contact_id_fkey"; columns: ["contact_id"]; isOneToOne: false; referencedRelation: "contacts"; referencedColumns: ["id"] },
+        ];
+      };
       tasks: {
         Row: {
           assignee_contact_id: string | null; created_at: string; due_date: string | null; id: string; owner_id: string;
@@ -175,7 +237,13 @@ export type Database = {
       };
     };
     Views: { [_ in never]: never };
-    Functions: { [_ in never]: never };
+    Functions: {
+      save_stripboard: { Args: { p_project: string; p_layout: Json }; Returns: undefined };
+      call_sheet_for_day: { Args: { p_day: string }; Returns: Json };
+      call_sheet_view: { Args: { p_token: string }; Returns: Json };
+      call_sheet_opened: { Args: { p_token: string }; Returns: undefined };
+      call_sheet_confirm: { Args: { p_token: string }; Returns: boolean };
+    };
     Enums: Enums;
     CompositeTypes: { [_ in never]: never };
   };
@@ -194,6 +262,10 @@ export type Element = T["elements"]["Row"];
 export type Shot = T["shots"]["Row"];
 export type LookbookItem = T["lookbook_items"]["Row"];
 export type ElementCategory = Enums["element_category"];
+export type ShootDay = T["shoot_days"]["Row"];
+export type CallSheet = T["call_sheets"]["Row"];
+export type CallSheetRecipient = T["call_sheet_recipients"]["Row"];
+export type RecipientStatus = Enums["recipient_status"];
 
 export const ELEMENT_CATEGORIES: ElementCategory[] = [
   "cast", "extras", "props", "wardrobe", "makeup", "location", "set_dressing", "vehicles", "animals", "sfx", "vfx", "sound", "other",

@@ -46,8 +46,8 @@ export default async function ScriptsPage({ params }: PageProps<"/projects/[id]/
       />
       <SubToolbar icon={<IconScript size={14} />} title={s.title} meta={`${scripts?.length ?? 0}`} />
 
-      <div className="flex flex-1 flex-wrap">
-        <ProjectSidebar projectId={id} active="script" t={t} />
+      <div className="flex flex-1 max-md:flex-col">
+        <ProjectSidebar projectId={id} />
         <main className="flex min-w-0 flex-1 flex-col gap-3 p-6 max-sm:p-4">
           {scripts?.length ? (
             <section aria-label={s.title} className="card overflow-hidden">

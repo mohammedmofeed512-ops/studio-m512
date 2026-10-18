@@ -74,8 +74,8 @@ export default async function BreakdownPage({ params, searchParams }: PageProps<
         ) : null}
       </SubToolbar>
 
-      <div className="flex flex-1 flex-wrap">
-        <ProjectSidebar projectId={id} active="breakdown" t={t} />
+      <div className="flex flex-1 max-md:flex-col">
+        <ProjectSidebar projectId={id} />
 
         {!script ? (
           <main className="flex-1 p-6">

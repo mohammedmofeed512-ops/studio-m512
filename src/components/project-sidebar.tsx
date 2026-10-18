@@ -1,47 +1,113 @@
-import Link from "next/link";
-import type { Dictionary } from "@/lib/i18n/dictionaries";
+"use client";
 
-type Tool = { key: string; label: string; href?: string; phase?: number };
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+import { PROJECT_TOOLS, projectFromPath, toolHref, type ProjectToolKey } from "@/lib/project-tools";
+import { useNav } from "./nav/nav-context";
 
 /**
- * The light secondary sidebar listing a project's tools, like StudioBinder's.
- * Tools from later build phases show a phase badge until they exist.
+ * The project's tools as numbered workflow steps (Alt+1…5 jumps straight to a step),
+ * a project switcher that keeps you on the same tool, and a "next step" link.
+ * On phones it becomes a scrollable row of tabs.
  */
-export function ProjectSidebar({ projectId, active, t }: { projectId: string; active: string; t: Dictionary }) {
+export function ProjectSidebar({ projectId }: { projectId: string }) {
+  const { projects, t } = useNav();
+  const pathname = usePathname();
+  const search = useSearchParams();
+  const router = useRouter();
+  const active = projectFromPath(pathname)?.tool ?? "overview";
+  const script = search.get("script");
   const p = t.projects;
-  const tools: Tool[] = [
-    { key: "overview", label: p.overview, href: `/projects/${projectId}` },
-    { key: "script", label: p.script, href: `/projects/${projectId}/scripts` },
-    { key: "breakdown", label: p.breakdown, href: `/projects/${projectId}/breakdown` },
-    { key: "shots", label: p.shots, href: `/projects/${projectId}/shots` },
-    { key: "schedule", label: p.schedule, phase: 4 },
-    { key: "callSheets", label: p.callSheets, phase: 4 },
-  ];
-  const resources: Tool[] = [
-    { key: "contacts", label: t.nav.contacts, href: "/contacts" },
-    { key: "locations", label: p.locations, href: "/contacts?kind=location" },
-    { key: "lookbook", label: p.lookbook, href: `/projects/${projectId}/lookbook` },
-  ];
+  const label = (key: ProjectToolKey) => (key === "lookbook" ? p.lookbook : p[key]);
+  const href = (key: ProjectToolKey, id = projectId) => toolHref(id, key, id === projectId ? script : null);
 
-  const item = (tool: Tool) =>
-    tool.href ? (
-      <Link key={tool.key} href={tool.href} aria-current={active === tool.key ? "page" : undefined} className="pill-nav">
-        {tool.label}
-      </Link>
-    ) : (
-      <span key={tool.key} className="flex h-10 items-center justify-between rounded-full px-3 font-semibold text-faint" aria-disabled="true">
-        {tool.label}
-        <span className="badge bg-ground text-faint">
-          {p.phase} {tool.phase}
-        </span>
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.altKey || e.ctrlKey || e.metaKey) return;
+      const n = Number(e.code.replace("Digit", ""));
+      const tool = PROJECT_TOOLS.find((x) => x.step === n);
+      if (!e.code.startsWith("Digit") || !tool) return;
+      e.preventDefault();
+      router.push(toolHref(projectId, tool.key, script));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [projectId, router, script]);
+
+  const current = projects.find((x) => x.id === projectId);
+  const steps = PROJECT_TOOLS.filter((x) => x.step >= 1 && x.step <= 5);
+  const activeStep = PROJECT_TOOLS.find((x) => x.key === active)?.step ?? 0;
+  const next = steps.find((x) => x.step === activeStep + 1);
+
+  const item = (key: ProjectToolKey, step?: number) => (
+    <Link
+      key={key}
+      href={href(key)}
+      aria-current={active === key ? "page" : undefined}
+      title={step !== undefined ? `Alt+${step}` : undefined}
+      className="pill-nav group shrink-0 gap-2.5 max-md:h-9 max-md:bg-ground max-md:px-3.5 max-md:aria-[current=page]:bg-tint"
+    >
+      <span className="flex min-w-0 items-center gap-2.5">
+        {step ? (
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-ground text-[10px] font-extrabold text-muted group-aria-[current=page]:bg-accent group-aria-[current=page]:text-white max-md:hidden">
+            {step}
+          </span>
+        ) : null}
+        <span className="truncate">{label(key)}</span>
       </span>
-    );
+      {step !== undefined ? <kbd className="text-[10px] font-semibold text-faint opacity-0 group-hover:opacity-100 max-md:hidden">Alt {step}</kbd> : null}
+    </Link>
+  );
 
   return (
-    <aside aria-label={p.tools} className="flex w-[250px] shrink-0 flex-col gap-0.5 border-e border-line bg-white px-3 py-4 max-md:w-full max-md:border-e-0 max-md:border-b">
-      {tools.map(item)}
-      <div className="mx-3 mb-1.5 mt-3.5 text-[11px] font-bold text-faint">{p.resources}</div>
-      {resources.map(item)}
+    <aside aria-label={p.tools} className="w-[250px] shrink-0 border-e border-line bg-white max-md:w-full max-md:border-e-0 max-md:border-b">
+      <div className="sticky top-0 flex max-h-dvh flex-col gap-0.5 overflow-y-auto px-3 py-4 max-md:static max-md:max-h-none max-md:flex-row max-md:gap-1.5 max-md:overflow-x-auto max-md:py-2">
+      {projects.length > 1 ? (
+        <details className="relative mb-2 max-md:hidden">
+          <summary className="flex h-10 cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-line px-3 font-bold [&::-webkit-details-marker]:hidden">
+            <span className="truncate">{current?.name ?? p.title}</span>
+            <span aria-hidden className="text-[10px] text-faint">▼</span>
+          </summary>
+          <div className="absolute inset-x-0 top-11 z-30 max-h-72 overflow-y-auto rounded-[10px] border border-line bg-white p-1.5 shadow-lg">
+            <div className="px-2.5 py-1.5 text-[11px] font-bold text-faint">{t.flow.switchProject}</div>
+            {projects.map((x) => (
+              <Link
+                key={x.id}
+                href={href(active, x.id)}
+                aria-current={x.id === projectId ? "true" : undefined}
+                className="block truncate rounded-md px-2.5 py-2 font-semibold hover:bg-ground aria-[current=true]:text-accent-ink"
+              >
+                {x.name}
+              </Link>
+            ))}
+          </div>
+        </details>
+      ) : null}
+
+      {item("overview", 0)}
+      <div className="mx-3 mb-1.5 mt-3.5 text-[11px] font-bold text-faint max-md:hidden">{t.flow.steps}</div>
+      {steps.map((x) => item(x.key, x.step))}
+
+      <div className="mx-3 mb-1.5 mt-3.5 text-[11px] font-bold text-faint max-md:hidden">{p.resources}</div>
+      {item("lookbook")}
+      <Link href="/contacts" className="pill-nav shrink-0 max-md:h-9 max-md:bg-ground max-md:px-3.5">
+        {t.nav.contacts}
+      </Link>
+      <Link href="/contacts?kind=location" className="pill-nav shrink-0 max-md:h-9 max-md:bg-ground max-md:px-3.5">
+        {p.locations}
+      </Link>
+
+      {next ? (
+        <Link href={href(next.key)} className="mt-4 rounded-[10px] bg-tint px-3.5 py-3 hover:bg-accent/15 max-md:hidden">
+          <span className="block text-[11px] font-bold text-muted">{t.flow.next}</span>
+          <span className="mt-0.5 flex items-center justify-between font-bold text-accent-ink">
+            {next.step}. {label(next.key)}
+            <span aria-hidden className="rtl:rotate-180">→</span>
+          </span>
+        </Link>
+      ) : null}
+      </div>
     </aside>
   );
 }

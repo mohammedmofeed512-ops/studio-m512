@@ -5,7 +5,7 @@ import { Topbar } from "./topbar";
 
 export async function PageHeader({ crumbs }: { crumbs: ReactNode }) {
   const [{ locale, t }, viewer] = await Promise.all([getI18n(), getViewer()]);
-  return <Topbar crumbs={crumbs} locale={locale} userName={viewer.name} company={viewer.company} signOutLabel={t.common.signOut} />;
+  return <Topbar crumbs={crumbs} locale={locale} userName={viewer.name} company={viewer.company} signOutLabel={t.common.signOut} paletteLabel={t.palette.open} />;
 }
 
 /** The second white bar under the top bar: tinted icon, page title, actions. */

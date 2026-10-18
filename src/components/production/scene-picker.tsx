@@ -17,6 +17,12 @@ const DAY_NIGHT: Record<string, { ar: string; en: string }> = {
   continuous: { ar: "مستمر", en: "CONT." },
 };
 
+/** INT/EXT and day/night labels in one language, for client components. */
+export function slugLabels(locale: "ar" | "en") {
+  const pick = (m: Record<string, { ar: string; en: string }>) => Object.fromEntries(Object.entries(m).map(([k, v]) => [k, v[locale]]));
+  return { intExt: pick(INT_EXT), dayNight: pick(DAY_NIGHT) };
+}
+
 export function sceneSlug(scene: Pick<SceneRow, "int_ext" | "day_night">, locale: "ar" | "en") {
   return `${INT_EXT[scene.int_ext]?.[locale] ?? ""} · ${DAY_NIGHT[scene.day_night]?.[locale] ?? ""}`;
 }

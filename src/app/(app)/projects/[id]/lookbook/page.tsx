@@ -37,8 +37,8 @@ export default async function LookbookPage({ params }: PageProps<"/projects/[id]
         }
       />
       <SubToolbar icon={<IconProjects size={14} />} title={t.lookbook.title} meta={`${items?.length ?? 0} ${t.lookbook.images}`} />
-      <div className="flex flex-1 flex-wrap">
-        <ProjectSidebar projectId={id} active="lookbook" t={t} />
+      <div className="flex flex-1 max-md:flex-col">
+        <ProjectSidebar projectId={id} />
         <main className="min-w-0 flex-1 p-6 max-sm:p-4">
           <LookbookBoard
             projectId={id}

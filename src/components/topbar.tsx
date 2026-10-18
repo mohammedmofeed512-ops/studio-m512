@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { setLocale, signOut } from "@/lib/actions";
 import type { Locale } from "@/lib/i18n/dictionaries";
+import { PaletteButton } from "./nav/command-palette";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -15,18 +16,21 @@ export function Topbar({
   userName,
   company,
   signOutLabel,
+  paletteLabel,
 }: {
   crumbs: ReactNode;
   locale: Locale;
   userName: string;
   company: string;
   signOutLabel: string;
+  paletteLabel: string;
 }) {
   const other: Locale = locale === "ar" ? "en" : "ar";
   return (
     <header className="flex h-[60px] shrink-0 items-center justify-between gap-3 border-b border-line bg-white px-6">
       <div className="min-w-0 truncate text-[13px] font-semibold">{crumbs}</div>
       <div className="flex items-center gap-2.5">
+        <PaletteButton label={paletteLabel} />
         <form action={setLocale}>
           <input type="hidden" name="locale" value={other} />
           <button className="btn-soft" aria-label={other === "en" ? "Switch to English" : "التبديل إلى العربية"}>

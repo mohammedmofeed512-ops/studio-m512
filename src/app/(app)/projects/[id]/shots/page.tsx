@@ -72,8 +72,8 @@ export default async function ShotsPage({ params, searchParams }: PageProps<"/pr
         ) : null}
       </SubToolbar>
 
-      <div className="flex flex-1 flex-wrap">
-        <ProjectSidebar projectId={id} active="shots" t={t} />
+      <div className="flex flex-1 max-md:flex-col">
+        <ProjectSidebar projectId={id} />
         {!script ? (
           <main className="flex-1 p-6">
             <div className="card px-6 py-14 text-center text-muted">

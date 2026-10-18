@@ -44,8 +44,8 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
       />
       <SubToolbar icon={<IconProjects size={14} />} title={t.projects.overview} meta={`${t.projectTypes[project.type]} · ${t.projectStages[project.stage]}`} />
 
-      <div className="flex flex-1 flex-wrap">
-        <ProjectSidebar projectId={project.id} active="overview" t={t} />
+      <div className="flex flex-1 max-md:flex-col">
+        <ProjectSidebar projectId={project.id} />
 
         <main className="grid min-w-0 flex-1 grid-cols-[repeat(auto-fit,minmax(340px,1fr))] content-start gap-3 p-6 max-sm:grid-cols-1 max-sm:p-4">
           <section aria-labelledby="details-h" className="card overflow-hidden">
