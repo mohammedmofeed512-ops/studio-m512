@@ -20,9 +20,22 @@ export function totalSeconds(rows: AvRow[]): number {
 }
 
 export function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
+  const mm = String(m).padStart(2, "0");
+  const ss = String(s).padStart(2, "0");
+  return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+/** Running timecode for each row: it starts where the previous row ended. */
+export function timecodes(rows: AvRow[]): Array<{ start: number; end: number }> {
+  let t = 0;
+  return rows.map((r) => {
+    const start = t;
+    t += rowSeconds(r);
+    return { start, end: t };
+  });
 }
 
 export function newRowId() {

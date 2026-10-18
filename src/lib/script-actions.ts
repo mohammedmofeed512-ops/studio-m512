@@ -19,7 +19,8 @@ function sanitizeLines(input: unknown): ScriptLine[] {
   if (!Array.isArray(input)) return [];
   return input.slice(0, 20000).map((l) => {
     const kind: ElementKind = (ELEMENT_KINDS as readonly string[]).includes(l?.kind) ? l.kind : "action";
-    const text = typeof l?.text === "string" ? l.text.slice(0, 5000) : "";
+    // Control characters (often left by PDF extraction) are rejected by Postgres JSON.
+    const text = typeof l?.text === "string" ? l.text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").slice(0, 5000) : "";
     const sceneId = kind === "sceneHeading" ? (typeof l?.sceneId === "string" && UUID.test(l.sceneId) ? l.sceneId : crypto.randomUUID()) : null;
     return { kind, text, sceneId };
   });
@@ -30,9 +31,10 @@ async function syncScenes(supabase: Supabase, scriptId: string, lines: ScriptLin
   const scenes = extractScenes(lines);
   const ids = scenes.map((s) => s.id);
   const del = supabase.from("scenes").delete().eq("script_id", scriptId);
-  await (ids.length ? del.not("id", "in", `(${ids.join(",")})`) : del);
+  const { error: delError } = await (ids.length ? del.not("id", "in", `(${ids.join(",")})`) : del);
+  if (delError) throw new Error(`scenes.delete: ${delError.message}`);
   if (scenes.length) {
-    await supabase.from("scenes").upsert(
+    const { error: upError } = await supabase.from("scenes").upsert(
       scenes.map((s) => ({
         id: s.id,
         script_id: scriptId,
@@ -45,6 +47,7 @@ async function syncScenes(supabase: Supabase, scriptId: string, lines: ScriptLin
         position: s.position,
       })),
     );
+    if (upError) throw new Error(`scenes.upsert: ${upError.message}`);
   }
 }
 
@@ -70,39 +73,63 @@ export async function createScript(fd: FormData) {
 
   const { data: script, error } = await supabase.from("scripts").insert({ project_id: projectId, title, kind, language }).select("id").single();
   if (error || !script) return;
-  const { data: version } = await supabase
+  const { data: version, error: versionError } = await supabase
     .from("script_versions")
     .insert({ script_id: script.id, version_number: 1, revision_color: "white", content })
     .select("id")
     .single();
-  if (version) await supabase.from("scripts").update({ current_version_id: version.id }).eq("id", script.id);
-  if (kind === "screenplay") await syncScenes(supabase, script.id, lines);
+  if (versionError || !version) {
+    console.error("createScript: version insert failed", versionError?.message);
+    await supabase.from("scripts").delete().eq("id", script.id);
+    return;
+  }
+  await supabase.from("scripts").update({ current_version_id: version.id }).eq("id", script.id);
+  if (kind === "screenplay") await syncScenes(supabase, script.id, lines).catch((e) => console.error("createScript: scenes", e));
 
   revalidatePath(`/projects/${projectId}`, "layout");
   redirect(`/projects/${projectId}/scripts/${script.id}`);
 }
 
 // ───────────── autosave ─────────────
-export type SaveResult = { ok: true; savedAt: string } | { ok: false };
+export type SaveResult = { ok: true; savedAt: string; warning?: string } | { ok: false; error: string };
 
 export async function saveScriptContent(scriptId: string, content: unknown): Promise<SaveResult> {
-  if (!UUID.test(scriptId)) return { ok: false };
-  const { supabase } = await requireUser();
-  const { data: script } = await supabase.from("scripts").select("id, kind, current_version_id").eq("id", scriptId).maybeSingle();
-  if (!script?.current_version_id) return { ok: false };
+  try {
+    if (!UUID.test(scriptId)) return { ok: false, error: "bad script id" };
+    const { supabase } = await requireUser();
+    const { data: script, error: readError } = await supabase.from("scripts").select("id, kind, current_version_id").eq("id", scriptId).maybeSingle();
+    if (readError) return { ok: false, error: `read: ${readError.message}` };
+    if (!script?.current_version_id) return { ok: false, error: "script has no current version" };
 
-  let clean: Json;
-  if (script.kind === "av") {
-    clean = sanitizeAvDoc(content) as unknown as Json;
-  } else {
-    const lines = sanitizeLines(docToLines(content));
-    clean = linesToDoc(lines) as unknown as Json;
-    await syncScenes(supabase, script.id, lines);
+    let clean: Json;
+    let lines: ScriptLine[] = [];
+    if (script.kind === "av") {
+      clean = sanitizeAvDoc(content) as unknown as Json;
+    } else {
+      lines = sanitizeLines(docToLines(content));
+      clean = linesToDoc(lines) as unknown as Json;
+    }
+    // Save the text first so a scene-sync problem can never lose writing.
+    const { error } = await supabase.from("script_versions").update({ content: clean }).eq("id", script.current_version_id);
+    if (error) return { ok: false, error: `write: ${error.message}` };
+    await supabase.from("scripts").update({ updated_at: new Date().toISOString() }).eq("id", script.id);
+    let warning: string | undefined;
+    if (script.kind === "screenplay") {
+      warning = await syncScenes(supabase, script.id, lines).then(
+        () => undefined,
+        (e: unknown) => {
+          const message = e instanceof Error ? e.message : String(e);
+          console.error("saveScriptContent: scene sync failed", scriptId, message);
+          return message;
+        },
+      );
+    }
+    return { ok: true, savedAt: new Date().toISOString(), warning };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("saveScriptContent failed", scriptId, message);
+    return { ok: false, error: message };
   }
-  const { error } = await supabase.from("script_versions").update({ content: clean }).eq("id", script.current_version_id);
-  if (error) return { ok: false };
-  await supabase.from("scripts").update({ updated_at: new Date().toISOString() }).eq("id", script.id);
-  return { ok: true, savedAt: new Date().toISOString() };
 }
 
 // ───────────── versions ─────────────

@@ -80,3 +80,16 @@ test("scenes, eighths, round trip", () => {
   assert.equal(nextOnTab("action"), "character");
   assert.equal(nextOnTab("action", true), "sceneHeading");
 });
+
+test("AV running timecode", async () => {
+  const { timecodes, formatDuration } = await import("../src/lib/screenplay/av");
+  const rows = [
+    { id: "a", video: "", audio: "", seconds: 4 },
+    { id: "b", video: "", audio: "", seconds: 10 },
+    { id: "c", video: "", audio: "", seconds: 3 },
+  ];
+  assert.deepEqual(timecodes(rows), [{ start: 0, end: 4 }, { start: 4, end: 14 }, { start: 14, end: 17 }]);
+  assert.equal(formatDuration(14), "00:14");
+  assert.equal(formatDuration(75), "01:15");
+  assert.equal(formatDuration(3725), "1:02:05");
+});

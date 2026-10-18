@@ -28,6 +28,7 @@ export function ScreenplayEditor({
   readOnly?: boolean;
 }) {
   const [saveState, setSaveState] = useState<SaveState>("saved");
+  const [saveError, setSaveError] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef<unknown>(null);
 
@@ -68,9 +69,16 @@ export function ScreenplayEditor({
     const content = pending.current;
     pending.current = null;
     setSaveState("saving");
-    const result = await saveScriptContent(scriptId, content).catch(() => ({ ok: false as const }));
+    const result = await saveScriptContent(scriptId, content).catch((e: unknown) => ({ ok: false as const, error: e instanceof Error ? e.message : String(e) }));
     if (pending.current) return; // newer edits arrived; their timer will save them
     setSaveState(result.ok ? "saved" : "error");
+    setSaveError(result.ok ? (result.warning ?? "") : result.error);
+    if (!result.ok) {
+      // Keep the unsaved content and retry shortly.
+      pending.current = pending.current ?? content;
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(flush, 5000);
+    }
   }
 
   // Save on Ctrl/⌘+S and warn before leaving with unsaved edits.
@@ -154,8 +162,9 @@ export function ScreenplayEditor({
                 </button>
               ))}
             </div>
-            <span role="status" aria-live="polite" className={`ms-auto text-[12px] font-semibold ${saveState === "error" ? "text-warn" : "text-muted"}`}>
+            <span role="status" aria-live="polite" className={`ms-auto max-w-[50%] truncate text-[12px] font-semibold ${saveState === "error" ? "text-warn" : "text-muted"}`} title={saveError || undefined}>
               {status}
+              {saveError ? <span className="font-normal"> · {saveError}</span> : null}
             </span>
           </div>
         ) : null}

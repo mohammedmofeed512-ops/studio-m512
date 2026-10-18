@@ -7,7 +7,9 @@ import { ConfirmButton } from "@/components/confirm-button";
 import { ScreenplayEditor } from "@/components/screenplay/screenplay-editor";
 import { AvEditor } from "@/components/screenplay/av-editor";
 import { createRevision, deleteScript, renameScript, switchVersion } from "@/lib/script-actions";
-import { REVISION_COLORS, REVISION_SWATCH, type RevisionColor } from "@/lib/screenplay/model";
+import { REVISION_COLORS, REVISION_SWATCH, linesToDoc, type RevisionColor } from "@/lib/screenplay/model";
+import { emptyAvDoc } from "@/lib/screenplay/av";
+import type { Json } from "@/lib/database.types";
 import { getI18n } from "@/lib/i18n/server";
 import { dictionaries } from "@/lib/i18n/dictionaries";
 import { getViewer } from "@/lib/viewer";
@@ -33,6 +35,20 @@ export default async function ScriptPage({ params }: PageProps<"/projects/[id]/s
     supabase.from("script_versions").select("id, version_number, revision_color, created_at").eq("script_id", scriptId).order("version_number", { ascending: false }),
   ]);
   if (!script || !project) notFound();
+
+  // A script whose first version failed to store gets a fresh blank version, so it can be edited and saved.
+  if (!script.current_version_id) {
+    const blank = script.kind === "av" ? emptyAvDoc() : linesToDoc([{ kind: "sceneHeading", text: "", sceneId: crypto.randomUUID() }]);
+    const { data: repaired } = await supabase
+      .from("script_versions")
+      .insert({ script_id: script.id, version_number: (versions?.[0]?.version_number ?? 0) + 1, revision_color: "white", content: blank as unknown as Json })
+      .select("id")
+      .single();
+    if (repaired) {
+      await supabase.from("scripts").update({ current_version_id: repaired.id }).eq("id", script.id);
+      script.current_version_id = repaired.id;
+    }
+  }
 
   const { data: current } = await supabase.from("script_versions").select("content, version_number, revision_color").eq("id", script.current_version_id ?? "").maybeSingle();
   const s = t.scripts;

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { saveScriptContent } from "@/lib/script-actions";
-import { estimateSeconds, formatDuration, newRowId, rowSeconds, sanitizeAvDoc, totalSeconds, type AvRow } from "@/lib/screenplay/av";
+import { estimateSeconds, formatDuration, newRowId, rowSeconds, sanitizeAvDoc, timecodes, totalSeconds, type AvRow } from "@/lib/screenplay/av";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 
 type SaveState = "saved" | "dirty" | "saving" | "error";
@@ -13,6 +13,7 @@ export function AvEditor({ scriptId, initialContent, language, t }: { scriptId: 
     return doc.rows.length ? doc.rows : [{ id: newRowId(), video: "", audio: "", seconds: null }];
   });
   const [saveState, setSaveState] = useState<SaveState>("saved");
+  const [saveError, setSaveError] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dirty = useRef(false);
   const latest = useRef(rows);
@@ -21,9 +22,15 @@ export function AvEditor({ scriptId, initialContent, language, t }: { scriptId: 
     if (!dirty.current) return;
     dirty.current = false;
     setSaveState("saving");
-    const result = await saveScriptContent(scriptId, { type: "av", rows: latest.current }).catch(() => ({ ok: false as const }));
+    const result = await saveScriptContent(scriptId, { type: "av", rows: latest.current }).catch((e: unknown) => ({ ok: false as const, error: e instanceof Error ? e.message : String(e) }));
     if (dirty.current) return;
     setSaveState(result.ok ? "saved" : "error");
+    setSaveError(result.ok ? "" : result.error);
+    if (!result.ok) {
+      dirty.current = true;
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(flush, 5000);
+    }
   }
 
   function update(next: AvRow[]) {
@@ -53,6 +60,7 @@ export function AvEditor({ scriptId, initialContent, language, t }: { scriptId: 
   };
 
   const total = totalSeconds(rows);
+  const codes = timecodes(rows);
   const status = saveState === "saving" ? t.saving : saveState === "dirty" ? t.unsaved : saveState === "error" ? t.saveFailed : t.saved;
   const dir = language === "ar" ? "rtl" : "ltr";
 
@@ -63,22 +71,25 @@ export function AvEditor({ scriptId, initialContent, language, t }: { scriptId: 
           {t.avTotal}: {formatDuration(total)}
         </span>
         <span className="text-[12px] text-muted">{rows.length} ·</span>
-        <span role="status" aria-live="polite" className={`ms-auto text-[12px] font-semibold ${saveState === "error" ? "text-warn" : "text-muted"}`}>
+        <span role="status" aria-live="polite" className={`ms-auto max-w-[60%] truncate text-[12px] font-semibold ${saveState === "error" ? "text-warn" : "text-muted"}`} title={saveError || undefined}>
           {status}
+          {saveError ? <span className="font-normal"> · {saveError}</span> : null}
         </span>
       </div>
 
       <div dir={dir} lang={language} className="print-page card overflow-hidden">
-        <div className="grid grid-cols-[44px_1fr_1fr_96px] border-b border-line bg-ground/60 text-[11px] font-bold text-faint max-md:hidden">
+        <div className="grid grid-cols-[44px_104px_1fr_1fr_96px] border-b border-line bg-ground/60 text-[11px] font-bold text-faint max-md:hidden">
           <span className="px-3 py-3">#</span>
+          <span className="px-3 py-3">{t.avTimecode}</span>
           <span className="px-3 py-3">{t.avVideo}</span>
           <span className="px-3 py-3">{t.avAudio}</span>
           <span className="px-3 py-3">{t.avSeconds}</span>
         </div>
         {rows.map((row, i) => {
           const estimated = row.seconds == null;
+          const tc = codes[i];
           return (
-            <div key={row.id} className="av-row grid grid-cols-[44px_1fr_1fr_96px] items-start border-b border-line last:border-b-0 max-md:grid-cols-1">
+            <div key={row.id} className="av-row grid grid-cols-[44px_104px_1fr_1fr_96px] items-start border-b border-line last:border-b-0 max-md:grid-cols-1">
               <div className="flex flex-col items-center gap-1 px-2 pt-3 max-md:flex-row max-md:px-4">
                 <span className="text-[13px] font-extrabold text-accent-ink">{i + 1}</span>
                 <span className="no-print flex flex-col max-md:flex-row">
@@ -88,6 +99,11 @@ export function AvEditor({ scriptId, initialContent, language, t }: { scriptId: 
                   <button type="button" onClick={() => move(i, 1)} disabled={i === rows.length - 1} aria-label={t.avMoveDown} className="btn-ghost h-6 px-1.5 text-[11px]">
                     ▼
                   </button>
+                </span>
+              </div>
+              <div className="px-3 pt-3.5 max-md:px-4 max-md:pt-0" aria-label={`${t.avTimecode} ${i + 1}`}>
+                <span dir="ltr" className="block whitespace-nowrap font-mono text-[12.5px] font-bold text-ink">
+                  {formatDuration(tc.start)} – {formatDuration(tc.end)}
                 </span>
               </div>
               <label className="block p-2">

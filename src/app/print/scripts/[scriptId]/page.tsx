@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { getI18n } from "@/lib/i18n/server";
 import { getViewer } from "@/lib/viewer";
 import { docToLines } from "@/lib/screenplay/model";
-import { formatDuration, rowSeconds, sanitizeAvDoc, totalSeconds } from "@/lib/screenplay/av";
+import { formatDuration, sanitizeAvDoc, timecodes, totalSeconds } from "@/lib/screenplay/av";
 import { dictionaries } from "@/lib/i18n/dictionaries";
 import { PrintBar } from "./print-bar";
 
@@ -69,6 +69,7 @@ export default async function PrintScriptPage({ params }: PageProps<"/print/scri
 
 function AvPrint({ content, labels }: { content: unknown; labels: (typeof dictionaries)["ar"]["scripts"] }) {
   const { rows } = sanitizeAvDoc(content);
+  const codes = timecodes(rows);
   return (
     <section className="print-page rounded-[10px] bg-white p-8 print:p-0">
       <p className="mb-3 text-[12px] font-bold text-muted">
@@ -78,18 +79,20 @@ function AvPrint({ content, labels }: { content: unknown; labels: (typeof dictio
         <thead>
           <tr>
             <th className="th w-8">#</th>
+            <th className="th w-28">{labels.avTimecode}</th>
             <th className="th">{labels.avVideo}</th>
             <th className="th">{labels.avAudio}</th>
-            <th className="th w-16">{labels.avSeconds}</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r, i) => (
             <tr key={r.id} className="av-row align-top">
               <td className="td font-bold">{i + 1}</td>
+              <td className="td whitespace-nowrap font-mono text-[12px]" dir="ltr">
+                {formatDuration(codes[i].start)} – {formatDuration(codes[i].end)}
+              </td>
               <td className="td whitespace-pre-wrap">{r.video}</td>
               <td className="td whitespace-pre-wrap">{r.audio}</td>
-              <td className="td">{formatDuration(rowSeconds(r))}</td>
             </tr>
           ))}
         </tbody>
