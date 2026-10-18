@@ -12,15 +12,15 @@ export function ProjectSidebar({ projectId, active, t }: { projectId: string; ac
   const tools: Tool[] = [
     { key: "overview", label: p.overview, href: `/projects/${projectId}` },
     { key: "script", label: p.script, href: `/projects/${projectId}/scripts` },
-    { key: "breakdown", label: p.breakdown, phase: 3 },
-    { key: "shots", label: p.shots, phase: 3 },
+    { key: "breakdown", label: p.breakdown, href: `/projects/${projectId}/breakdown` },
+    { key: "shots", label: p.shots, href: `/projects/${projectId}/shots` },
     { key: "schedule", label: p.schedule, phase: 4 },
     { key: "callSheets", label: p.callSheets, phase: 4 },
   ];
   const resources: Tool[] = [
     { key: "contacts", label: t.nav.contacts, href: "/contacts" },
     { key: "locations", label: p.locations, href: "/contacts?kind=location" },
-    { key: "lookbook", label: p.lookbook, phase: 3 },
+    { key: "lookbook", label: p.lookbook, href: `/projects/${projectId}/lookbook` },
   ];
 
   const item = (tool: Tool) =>

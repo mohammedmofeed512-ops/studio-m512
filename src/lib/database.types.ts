@@ -1,6 +1,6 @@
 // Generated from the Supabase schema (phase 1 tables). Regenerate with:
 //   npx supabase gen types typescript --project-id qpccdnhznxtwklctyzgz > src/lib/database.types.ts
-// Later phases add elements, shots, shoot days and call sheets here.
+// Later phases add shoot days and call sheets here.
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -12,6 +12,9 @@ type Enums = {
   script_kind: "screenplay" | "av";
   int_ext: "int" | "ext" | "int_ext";
   day_night: "day" | "night" | "dawn" | "dusk" | "continuous";
+  element_category:
+    | "cast" | "extras" | "props" | "wardrobe" | "makeup" | "vehicles" | "animals"
+    | "sfx" | "vfx" | "sound" | "set_dressing" | "location" | "other";
 };
 
 export type Database = {
@@ -100,6 +103,58 @@ export type Database = {
           { foreignKeyName: "scenes_script_id_fkey"; columns: ["script_id"]; isOneToOne: false; referencedRelation: "scripts"; referencedColumns: ["id"] },
         ];
       };
+      elements: {
+        Row: {
+          cast_number: number | null; category: Enums["element_category"]; contact_id: string | null; created_at: string; id: string;
+          name: string; owner_id: string; project_id: string; updated_at: string;
+        };
+        Insert: {
+          cast_number?: number | null; category: Enums["element_category"]; contact_id?: string | null; created_at?: string; id?: string;
+          name: string; owner_id?: string; project_id: string; updated_at?: string;
+        };
+        Update: {
+          cast_number?: number | null; category?: Enums["element_category"]; contact_id?: string | null; created_at?: string; id?: string;
+          name?: string; owner_id?: string; project_id?: string; updated_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: "elements_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "projects"; referencedColumns: ["id"] },
+          { foreignKeyName: "elements_contact_id_fkey"; columns: ["contact_id"]; isOneToOne: false; referencedRelation: "contacts"; referencedColumns: ["id"] },
+        ];
+      };
+      scene_elements: {
+        Row: { element_id: string; owner_id: string; scene_id: string };
+        Insert: { element_id: string; owner_id?: string; scene_id: string };
+        Update: { element_id?: string; owner_id?: string; scene_id?: string };
+        Relationships: [
+          { foreignKeyName: "scene_elements_element_id_fkey"; columns: ["element_id"]; isOneToOne: false; referencedRelation: "elements"; referencedColumns: ["id"] },
+          { foreignKeyName: "scene_elements_scene_id_fkey"; columns: ["scene_id"]; isOneToOne: false; referencedRelation: "scenes"; referencedColumns: ["id"] },
+        ];
+      };
+      shots: {
+        Row: {
+          angle: string | null; created_at: string; description: string | null; duration_seconds: number | null; id: string; image_path: string | null;
+          lens: string | null; movement: string | null; owner_id: string; position: number; scene_id: string; shot_number: string; size: string | null; updated_at: string;
+        };
+        Insert: {
+          angle?: string | null; created_at?: string; description?: string | null; duration_seconds?: number | null; id?: string; image_path?: string | null;
+          lens?: string | null; movement?: string | null; owner_id?: string; position?: number; scene_id: string; shot_number: string; size?: string | null; updated_at?: string;
+        };
+        Update: {
+          angle?: string | null; created_at?: string; description?: string | null; duration_seconds?: number | null; id?: string; image_path?: string | null;
+          lens?: string | null; movement?: string | null; owner_id?: string; position?: number; scene_id?: string; shot_number?: string; size?: string | null; updated_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: "shots_scene_id_fkey"; columns: ["scene_id"]; isOneToOne: false; referencedRelation: "scenes"; referencedColumns: ["id"] },
+        ];
+      };
+      lookbook_items: {
+        Row: { category: string | null; created_at: string; id: string; image_path: string; note: string | null; owner_id: string; position: number; project_id: string };
+        Insert: { category?: string | null; created_at?: string; id?: string; image_path: string; note?: string | null; owner_id?: string; position?: number; project_id: string };
+        Update: { category?: string | null; created_at?: string; id?: string; image_path?: string; note?: string | null; owner_id?: string; position?: number; project_id?: string };
+        Relationships: [
+          { foreignKeyName: "lookbook_items_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "projects"; referencedColumns: ["id"] },
+        ];
+      };
       tasks: {
         Row: {
           assignee_contact_id: string | null; created_at: string; due_date: string | null; id: string; owner_id: string;
@@ -135,6 +190,14 @@ export type Script = T["scripts"]["Row"];
 export type ScriptVersion = T["script_versions"]["Row"];
 export type Scene = T["scenes"]["Row"];
 export type ScriptKind = Enums["script_kind"];
+export type Element = T["elements"]["Row"];
+export type Shot = T["shots"]["Row"];
+export type LookbookItem = T["lookbook_items"]["Row"];
+export type ElementCategory = Enums["element_category"];
+
+export const ELEMENT_CATEGORIES: ElementCategory[] = [
+  "cast", "extras", "props", "wardrobe", "makeup", "location", "set_dressing", "vehicles", "animals", "sfx", "vfx", "sound", "other",
+];
 export type ProjectType = Enums["project_type"];
 export type ProjectStage = Enums["project_stage"];
 export type TaskStatus = Enums["task_status"];

@@ -40,7 +40,7 @@ added later through security-definer functions.
 | --- | --- | --- |
 | 1 | Sign-in, dashboard, projects, tasks, contacts, settings, Arabic/English | ✅ |
 | 2 | Arabic screenplay editor, AV scripts, import, PDF export, revisions | ✅ |
-| 3 | Breakdown, shot lists, storyboards, lookbooks | next |
-| 4 | Stripboard, shoot days, call sheets, sending and tracking | |
+| 3 | Breakdown, shot lists, storyboards, lookbooks | ✅ |
+| 4 | Stripboard, shoot days, call sheets, sending and tracking | next |
 | 5 | Client share links, comments and approvals, mobile polish | |
 | later | Budget and crew rates | |
