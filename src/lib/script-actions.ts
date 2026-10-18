@@ -101,6 +101,10 @@ export async function saveScriptContent(scriptId: string, content: unknown): Pro
     if (readError) return { ok: false, error: `read: ${readError.message}` };
     if (!script?.current_version_id) return { ok: false, error: "script has no current version" };
 
+    if (typeof content === "string") {
+      if (content.length > 4_000_000) return { ok: false, error: "script too large" };
+      content = JSON.parse(content);
+    }
     let clean: Json;
     let lines: ScriptLine[] = [];
     if (script.kind === "av") {

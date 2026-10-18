@@ -1,8 +1,12 @@
 import { Extension, Node, mergeAttributes } from "@tiptap/core";
 import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import type { Node as PMNode } from "@tiptap/pm/model";
 import {
   ELEMENT_KINDS,
   NEXT_ON_ENTER,
+  pageBreaks,
+  sceneNumberFor,
   looksLikeSceneHeading,
   nextOnTab,
   type ElementKind,
@@ -77,9 +81,45 @@ export const ElementNode = Node.create({
           return changed ? tr.setMeta("addToHistory", false) : null;
         },
       }),
+      new Plugin({
+        key: new PluginKey("screenplayLayout"),
+        props: { decorations: (state) => layoutDecorations(state.doc) },
+      }),
     ];
   },
 });
+
+/** Scene numbers in both margins of each heading, and a marker where each printed page starts. */
+function layoutDecorations(doc: PMNode) {
+  const nodes: Array<{ pos: number; node: PMNode }> = [];
+  doc.forEach((node, pos) => nodes.push({ pos, node }));
+  const decos: Decoration[] = [];
+  let scene = 0;
+  for (const { pos, node } of nodes) {
+    if (node.attrs.kind === "sceneHeading" && node.textContent.trim()) {
+      scene += 1;
+      decos.push(Decoration.node(pos, pos + node.nodeSize, { "data-scene-number": sceneNumberFor(node.textContent, scene) }));
+    }
+  }
+  const breaks = pageBreaks(nodes.map(({ node }) => ({ kind: node.attrs.kind as ElementKind, text: node.textContent })));
+  breaks.forEach((index, i) => {
+    const page = i + 2;
+    decos.push(
+      Decoration.widget(
+        nodes[index].pos,
+        () => {
+          const el = document.createElement("div");
+          el.className = "sp-pagebreak";
+          el.setAttribute("contenteditable", "false");
+          el.setAttribute("data-page", `${page}.`);
+          return el;
+        },
+        { side: -1, key: `page-${page}`, ignoreSelection: true },
+      ),
+    );
+  });
+  return DecorationSet.create(doc, decos);
+}
 
 function currentElement(editor: import("@tiptap/core").Editor) {
   const { $from } = editor.state.selection;

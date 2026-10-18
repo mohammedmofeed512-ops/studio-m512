@@ -101,69 +101,138 @@
   }
 
 /* ───────────── Screenplay page (editor + print) ─────────────
-   One element per line; kinds set the layout. Logical properties keep it right for RTL and LTR. */
+   Industry layout on a Letter page: 1.5" binding margin, 1" elsewhere, 6" of text.
+   Logical properties mirror it for Arabic (binding margin on the right). */
+.sp-page {
+  width: 8.5in;
+  max-width: 100%;
+  min-height: 11in;
+  margin-inline: auto;
+  padding-block: 1in;
+  padding-inline-start: 1.5in;
+  padding-inline-end: 1in;
+  background: white;
+  box-sizing: border-box;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(29, 30, 44, 0.1);
+}
 .screenplay {
-  font-family: var(--font-script);
-  font-size: 16px;
-  line-height: 1.85;
+  --line: 16px;
+  font-family: "Courier Prime", "Courier New", monospace;
+  font-size: 12pt;
+  line-height: var(--line);
   color: var(--color-ink);
   outline: none;
   caret-color: var(--color-accent);
 }
-.screenplay[lang="en"] {
-  font-family: "Courier Prime", "Courier New", monospace;
+.screenplay[lang="ar"] {
+  --line: 26px;
+  font-family: var(--font-script);
   font-size: 15px;
-  line-height: 1.6;
 }
 .screenplay .sp-el {
-  margin: 0;
-  min-height: 1.85em;
+  position: relative;
+  margin: var(--line) 0 0;
+  min-height: var(--line);
   white-space: pre-wrap;
+}
+.screenplay .sp-el:first-child,
+.screenplay .sp-pagebreak + .sp-el {
+  margin-top: 0;
 }
 .screenplay .sp-el[data-kind="sceneHeading"] {
   font-weight: 700;
-  margin-top: 1.6em;
-}
-.screenplay .sp-el[data-kind="sceneHeading"]:first-child {
-  margin-top: 0;
 }
 .screenplay[lang="en"] .sp-el[data-kind="sceneHeading"],
 .screenplay[lang="en"] .sp-el[data-kind="character"],
 .screenplay[lang="en"] .sp-el[data-kind="transition"] {
   text-transform: uppercase;
 }
-.screenplay .sp-el[data-kind="action"] {
-  margin-top: 0.9em;
-}
 .screenplay .sp-el[data-kind="character"] {
-  margin-top: 1em;
-  margin-inline-start: 38%;
-  font-weight: 700;
+  margin-inline-start: 2.2in;
 }
 .screenplay .sp-el[data-kind="parenthetical"] {
-  margin-inline-start: 31%;
-  margin-inline-end: 27%;
-  color: var(--color-body);
+  margin-top: 0;
+  margin-inline-start: 1.6in;
+  margin-inline-end: 2.4in;
 }
 .screenplay .sp-el[data-kind="dialogue"] {
-  margin-inline-start: 24%;
-  margin-inline-end: 18%;
+  margin-top: 0;
+  margin-inline-start: 1in;
+  margin-inline-end: 1.5in;
 }
 .screenplay .sp-el[data-kind="transition"] {
-  margin-top: 1em;
   text-align: end;
+}
+/* Scene numbers in both margins, as on a shooting script. */
+.screenplay .sp-el[data-scene-number]::before,
+.screenplay .sp-el[data-scene-number]::after {
+  content: attr(data-scene-number);
+  position: absolute;
+  top: 0;
   font-weight: 700;
+  color: var(--color-ink);
+  pointer-events: none;
+}
+.screenplay .sp-el[data-scene-number]::before {
+  inset-inline-start: -0.9in;
+}
+.screenplay .sp-el[data-scene-number]::after {
+  inset-inline-end: -0.6in;
 }
 /* Empty-line hint, written by the editor into data-placeholder. */
-.screenplay .sp-el.is-empty::before {
+.screenplay .sp-el.is-empty:not([data-scene-number])::before {
   content: attr(data-placeholder);
+  position: static;
   color: var(--color-faint);
+  font-weight: 400;
   pointer-events: none;
   float: inline-start;
   height: 0;
 }
-.screenplay .sp-el[data-kind="sceneHeading"] + .sp-el[data-kind="action"] {
-  margin-top: 0.6em;
+/* Where a printed page ends, with the next page's number. */
+.screenplay .sp-pagebreak {
+  position: relative;
+  height: 0;
+  margin-block: calc(var(--line) * 1.5);
+  margin-inline-start: -1.5in;
+  margin-inline-end: -1in;
+  border-top: 1px dashed var(--color-field);
+  user-select: none;
+}
+.screenplay .sp-pagebreak::after {
+  content: attr(data-page);
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 0.5in;
+  font-family: "Courier Prime", monospace;
+  font-size: 11px;
+  color: var(--color-faint);
+}
+@media (max-width: 860px) {
+  .sp-page {
+    min-height: 0;
+    padding-block: 32px;
+    padding-inline: 44px 20px;
+  }
+  .screenplay .sp-el[data-kind="character"] {
+    margin-inline-start: 34%;
+  }
+  .screenplay .sp-el[data-kind="parenthetical"] {
+    margin-inline: 24% 26%;
+  }
+  .screenplay .sp-el[data-kind="dialogue"] {
+    margin-inline: 14% 12%;
+  }
+  .screenplay .sp-el[data-scene-number]::before {
+    inset-inline-start: -36px;
+  }
+  .screenplay .sp-el[data-scene-number]::after {
+    display: none;
+  }
+  .screenplay .sp-pagebreak {
+    margin-inline: -44px -20px;
+  }
 }
 
 /* AV two-column script */
@@ -175,8 +244,18 @@
 
 @media print {
   @page {
-    size: A4;
-    margin: 25mm 22mm 22mm 30mm;
+    size: letter;
+    margin: 1in;
+    @top-right {
+      content: counter(page) ".";
+      font-family: "Courier Prime", monospace;
+      font-size: 12pt;
+    }
+  }
+  @page :first {
+    @top-right {
+      content: none;
+    }
   }
   body {
     background: white;
@@ -184,18 +263,26 @@
   .no-print {
     display: none !important;
   }
-  .print-page {
+  .print-page,
+  .sp-page {
     box-shadow: none !important;
-    padding: 0 !important;
-    max-width: none !important;
     border-radius: 0 !important;
+    max-width: none !important;
+    width: auto !important;
+    min-height: 0 !important;
   }
-  .screenplay .sp-el[data-kind="sceneHeading"] {
-    break-after: avoid;
+  /* The page margin gives 1"; the binding side gets another 0.5". */
+  .sp-page {
+    padding: 0 !important;
+    padding-inline-start: 0.5in !important;
   }
+  .screenplay .sp-el[data-kind="sceneHeading"],
   .screenplay .sp-el[data-kind="character"],
   .screenplay .sp-el[data-kind="parenthetical"] {
     break-after: avoid;
+  }
+  .screenplay .sp-el {
+    break-inside: avoid;
   }
   .av-row {
     break-inside: avoid;

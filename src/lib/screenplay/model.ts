@@ -113,15 +113,53 @@ export function docToLines(doc: unknown): ScriptLine[] {
 }
 
 // ───────────── scenes ─────────────
-/** Lines per page in a standard screenplay; used to estimate length in eighths of a page. */
-const LINES_PER_PAGE = 55;
-const CHARS_PER_ACTION_LINE = 60;
-const CHARS_PER_DIALOGUE_LINE = 35;
+/** Lines per page in a standard screenplay (Letter, 12pt, 1" top and bottom). */
+export const LINES_PER_PAGE = 55;
+/** Characters per line for each element at 12pt Courier: 6" text, 3.5" dialogue, 2" parenthetical. */
+const CHARS_PER_LINE: Record<ElementKind, number> = {
+  sceneHeading: 60,
+  action: 60,
+  character: 38,
+  parenthetical: 22,
+  dialogue: 35,
+  transition: 20,
+};
+/** Blank lines printed before each element. */
+const SPACE_BEFORE: Record<ElementKind, number> = {
+  sceneHeading: 1,
+  action: 1,
+  character: 1,
+  parenthetical: 0,
+  dialogue: 0,
+  transition: 1,
+};
 
-function printedLines(line: ScriptLine): number {
-  const width = line.kind === "dialogue" || line.kind === "parenthetical" ? CHARS_PER_DIALOGUE_LINE : CHARS_PER_ACTION_LINE;
-  const spacing = line.kind === "sceneHeading" || line.kind === "transition" || line.kind === "action" || line.kind === "character" ? 1 : 0;
-  return Math.max(1, Math.ceil(line.text.length / width)) + spacing;
+/** Printed height of one element in lines, including the blank line before it. */
+export function printedLines(line: Pick<ScriptLine, "kind" | "text">, first = false): number {
+  const body = Math.max(1, Math.ceil(line.text.length / CHARS_PER_LINE[line.kind]));
+  return body + (first ? 0 : SPACE_BEFORE[line.kind]);
+}
+
+/**
+ * Where pages break: the index of the first element on each page after the first.
+ * Elements are not split across pages, as in a printed screenplay.
+ */
+export function pageBreaks(lines: Array<Pick<ScriptLine, "kind" | "text">>): number[] {
+  const breaks: number[] = [];
+  let used = 0;
+  lines.forEach((line, i) => {
+    const h = printedLines(line, used === 0);
+    if (used > 0 && used + h > LINES_PER_PAGE) {
+      breaks.push(i);
+      used = printedLines(line, true);
+    } else used += h;
+  });
+  return breaks;
+}
+
+/** Scene number shown for each heading: an explicit leading number, otherwise its position. */
+export function sceneNumberFor(text: string, sequence: number): string {
+  return text.trim().match(/^(\d+[A-Za-z]?)[.\s]/)?.[1] ?? String(sequence);
 }
 
 export type ExtractedScene = {
@@ -156,10 +194,9 @@ export function extractScenes(lines: ScriptLine[]): ExtractedScene[] {
         continue;
       }
       const parsed = parseSceneHeading(line.text);
-      const explicit = line.text.trim().match(/^(\d+[A-Za-z]?)[.\s]/)?.[1];
       current = {
         id: line.sceneId,
-        number: explicit ?? String(scenes.length + 1),
+        number: sceneNumberFor(line.text, scenes.length + 1),
         heading: line.text.trim(),
         ...parsed,
         pageEighths: 1,

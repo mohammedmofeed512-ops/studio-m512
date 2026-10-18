@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getI18n } from "@/lib/i18n/server";
 import { getViewer } from "@/lib/viewer";
-import { docToLines } from "@/lib/screenplay/model";
+import { docToLines, sceneNumberFor, type ScriptLine } from "@/lib/screenplay/model";
 import { formatDuration, sanitizeAvDoc, timecodes, totalSeconds } from "@/lib/screenplay/av";
 import { dictionaries } from "@/lib/i18n/dictionaries";
 import { PrintBar } from "./print-bar";
@@ -32,9 +32,9 @@ export default async function PrintScriptPage({ params }: PageProps<"/print/scri
   return (
     <div className="min-h-dvh bg-ground print:bg-white">
       <PrintBar label={t.scripts.print} back={t.scripts.back} />
-      <div dir={dir} lang={lang} className="mx-auto flex max-w-[760px] flex-col gap-6 px-4 py-8 print:block print:p-0">
+      <div dir={dir} lang={lang} className="mx-auto flex max-w-[8.5in] flex-col gap-6 px-4 py-8 print:block print:max-w-none print:p-0">
         {/* Title page */}
-        <section className="print-page flex min-h-[70vh] flex-col items-center justify-center rounded-[10px] bg-white px-10 py-16 text-center print:min-h-[240mm]" style={{ breakAfter: "page" }}>
+        <section className="print-page flex min-h-[70vh] flex-col items-center justify-center rounded-[10px] bg-white px-10 py-16 text-center print:min-h-[8.5in]" style={{ breakAfter: "page" }}>
           <h1 className="text-[28px] font-extrabold" style={{ fontFamily: lang === "ar" ? "var(--font-script)" : "'Courier Prime', monospace" }}>
             {script.title}
           </h1>
@@ -52,10 +52,10 @@ export default async function PrintScriptPage({ params }: PageProps<"/print/scri
         {script.kind === "av" ? (
           <AvPrint content={version?.content} labels={st} />
         ) : (
-          <section className="print-page rounded-[10px] bg-white px-[72px] py-16 print:px-0">
+          <section className="sp-page">
             <div className="screenplay" lang={lang} dir={dir}>
-              {docToLines(version?.content).map((line, i) => (
-                <p key={i} className="sp-el" data-kind={line.kind}>
+              {numberedLines(docToLines(version?.content)).map((line, i) => (
+                <p key={i} className="sp-el" data-kind={line.kind} data-scene-number={line.sceneNumber}>
                   {line.text}
                 </p>
               ))}
@@ -99,4 +99,14 @@ function AvPrint({ content, labels }: { content: unknown; labels: (typeof dictio
       </table>
     </section>
   );
+}
+
+/** Adds the scene number to each non-empty heading, matching the editor's margins. */
+function numberedLines(lines: ScriptLine[]) {
+  let n = 0;
+  return lines.map((l) => {
+    if (l.kind !== "sceneHeading" || !l.text.trim()) return { ...l, sceneNumber: undefined };
+    n += 1;
+    return { ...l, sceneNumber: sceneNumberFor(l.text, n) };
+  });
 }

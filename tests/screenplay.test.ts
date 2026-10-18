@@ -93,3 +93,16 @@ test("AV running timecode", async () => {
   assert.equal(formatDuration(75), "01:15");
   assert.equal(formatDuration(3725), "1:02:05");
 });
+
+test("page breaks and scene numbers", async () => {
+  const { pageBreaks, sceneNumberFor, LINES_PER_PAGE } = await import("../src/lib/screenplay/model");
+  const short = Array.from({ length: 10 }, () => ({ kind: "action" as const, text: "سطر" }));
+  assert.deepEqual(pageBreaks(short), []);
+  // 40 one-line action paragraphs = 1 + 39×2 = 79 lines → one break.
+  const long = Array.from({ length: 40 }, () => ({ kind: "action" as const, text: "x" }));
+  const breaks = pageBreaks(long);
+  assert.equal(breaks.length, 1);
+  assert.equal(breaks[0], Math.floor((LINES_PER_PAGE - 1) / 2) + 1);
+  assert.equal(sceneNumberFor("12A. INT. ROOM - DAY", 3), "12A");
+  assert.equal(sceneNumberFor("داخلي. غرفة - ليل", 3), "3");
+});

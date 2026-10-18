@@ -69,7 +69,9 @@ export function ScreenplayEditor({
     const content = pending.current;
     pending.current = null;
     setSaveState("saving");
-    const result = await saveScriptContent(scriptId, content).catch((e: unknown) => ({ ok: false as const, error: e instanceof Error ? e.message : String(e) }));
+    // Sent as a JSON string: ProseMirror builds attrs with Object.create(null), which React
+    // cannot pass to a Server Action as plain data (the server would get an opaque reference).
+    const result = await saveScriptContent(scriptId, JSON.stringify(content)).catch((e: unknown) => ({ ok: false as const, error: e instanceof Error ? e.message : String(e) }));
     if (pending.current) return; // newer edits arrived; their timer will save them
     setSaveState(result.ok ? "saved" : "error");
     setSaveError(result.ok ? (result.warning ?? "") : result.error);
@@ -169,11 +171,11 @@ export function ScreenplayEditor({
           </div>
         ) : null}
 
-        <div className="px-6 py-7 max-sm:px-2">
-          <div className="print-page mx-auto w-full max-w-[680px] rounded-[10px] bg-white px-[72px] py-16 shadow-[0_1px_3px_rgba(29,30,44,0.08)] max-sm:px-6 max-sm:py-8">
+        <div className="overflow-x-auto px-6 py-7 max-sm:px-2">
+          <div className="sp-page">
             <EditorContent editor={editor} />
           </div>
-          {!readOnly ? <p className="no-print mx-auto mt-3 max-w-[680px] text-center text-[11px] text-faint">{s.shortcuts}</p> : null}
+          {!readOnly ? <p className="no-print mx-auto mt-3 max-w-[8.5in] text-center text-[11px] text-faint">{s.shortcuts}</p> : null}
         </div>
       </div>
 

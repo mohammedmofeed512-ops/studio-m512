@@ -105,3 +105,22 @@ test("Tab cycles and Mod-number sets the element", async () => {
   press(editor, "6", { ctrlKey: true });
   assert.equal(kinds(editor)[0], "transition:سطر");
 });
+
+test("editor JSON uses null-prototype attrs, so it must be sent as a string", async () => {
+  const editor = await makeEditor([{ kind: "sceneHeading", text: "داخلي. مطبخ - نهار" }]);
+  const json = editor.getJSON() as { content: Array<{ attrs: object }> };
+  // React only passes plain objects to Server Actions; this is why saving failed.
+  assert.equal(Object.getPrototypeOf(json.content[0].attrs), null);
+  const roundTrip = JSON.parse(JSON.stringify(json)) as { content: Array<{ attrs: object }> };
+  assert.equal(Object.getPrototypeOf(roundTrip.content[0].attrs), Object.prototype);
+});
+
+test("headings show their scene number in the margins", async () => {
+  const editor = await makeEditor([
+    { kind: "sceneHeading", text: "داخلي. مطبخ - نهار" },
+    { kind: "action", text: "وصف" },
+    { kind: "sceneHeading", text: "خارجي. طريق - ليل" },
+  ]);
+  const numbers = [...editor.view.dom.querySelectorAll("[data-scene-number]")].map((el) => el.getAttribute("data-scene-number"));
+  assert.deepEqual(numbers, ["1", "2"]);
+});
