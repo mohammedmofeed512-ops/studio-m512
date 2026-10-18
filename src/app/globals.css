@@ -99,3 +99,105 @@
 @utility badge {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold;
   }
+
+/* ───────────── Screenplay page (editor + print) ─────────────
+   One element per line; kinds set the layout. Logical properties keep it right for RTL and LTR. */
+.screenplay {
+  font-family: var(--font-script);
+  font-size: 16px;
+  line-height: 1.85;
+  color: var(--color-ink);
+  outline: none;
+  caret-color: var(--color-accent);
+}
+.screenplay[lang="en"] {
+  font-family: "Courier Prime", "Courier New", monospace;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.screenplay .sp-el {
+  margin: 0;
+  min-height: 1.85em;
+  white-space: pre-wrap;
+}
+.screenplay .sp-el[data-kind="sceneHeading"] {
+  font-weight: 700;
+  margin-top: 1.6em;
+}
+.screenplay .sp-el[data-kind="sceneHeading"]:first-child {
+  margin-top: 0;
+}
+.screenplay[lang="en"] .sp-el[data-kind="sceneHeading"],
+.screenplay[lang="en"] .sp-el[data-kind="character"],
+.screenplay[lang="en"] .sp-el[data-kind="transition"] {
+  text-transform: uppercase;
+}
+.screenplay .sp-el[data-kind="action"] {
+  margin-top: 0.9em;
+}
+.screenplay .sp-el[data-kind="character"] {
+  margin-top: 1em;
+  margin-inline-start: 38%;
+  font-weight: 700;
+}
+.screenplay .sp-el[data-kind="parenthetical"] {
+  margin-inline-start: 31%;
+  margin-inline-end: 27%;
+  color: var(--color-body);
+}
+.screenplay .sp-el[data-kind="dialogue"] {
+  margin-inline-start: 24%;
+  margin-inline-end: 18%;
+}
+.screenplay .sp-el[data-kind="transition"] {
+  margin-top: 1em;
+  text-align: end;
+  font-weight: 700;
+}
+/* Empty-line hint, written by the editor into data-placeholder. */
+.screenplay .sp-el.is-empty::before {
+  content: attr(data-placeholder);
+  color: var(--color-faint);
+  pointer-events: none;
+  float: inline-start;
+  height: 0;
+}
+.screenplay .sp-el[data-kind="sceneHeading"] + .sp-el[data-kind="action"] {
+  margin-top: 0.6em;
+}
+
+/* AV two-column script */
+.av-cell {
+  min-height: 72px;
+  resize: vertical;
+  line-height: 1.7;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 25mm 22mm 22mm 30mm;
+  }
+  body {
+    background: white;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-page {
+    box-shadow: none !important;
+    padding: 0 !important;
+    max-width: none !important;
+    border-radius: 0 !important;
+  }
+  .screenplay .sp-el[data-kind="sceneHeading"] {
+    break-after: avoid;
+  }
+  .screenplay .sp-el[data-kind="character"],
+  .screenplay .sp-el[data-kind="parenthetical"] {
+    break-after: avoid;
+  }
+  .av-row {
+    break-inside: avoid;
+  }
+}

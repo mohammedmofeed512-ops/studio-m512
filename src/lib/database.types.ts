@@ -1,6 +1,6 @@
 // Generated from the Supabase schema (phase 1 tables). Regenerate with:
 //   npx supabase gen types typescript --project-id qpccdnhznxtwklctyzgz > src/lib/database.types.ts
-// Later phases add scripts, scenes, shots, shoot days and call sheets here.
+// Later phases add elements, shots, shoot days and call sheets here.
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -9,6 +9,9 @@ type Enums = {
   project_stage: "development" | "pre_production" | "production" | "post_production" | "delivered" | "archived";
   project_type: "feature" | "short" | "commercial" | "documentary" | "corporate" | "music_video" | "series" | "other";
   task_status: "todo" | "in_progress" | "done";
+  script_kind: "screenplay" | "av";
+  int_ext: "int" | "ext" | "int_ext";
+  day_night: "day" | "night" | "dawn" | "dusk" | "continuous";
 };
 
 export type Database = {
@@ -54,6 +57,49 @@ export type Database = {
         };
         Relationships: [];
       };
+      scripts: {
+        Row: {
+          created_at: string; current_version_id: string | null; id: string; kind: Enums["script_kind"]; language: string;
+          owner_id: string; project_id: string; title: string; updated_at: string;
+        };
+        Insert: {
+          created_at?: string; current_version_id?: string | null; id?: string; kind?: Enums["script_kind"]; language?: string;
+          owner_id?: string; project_id: string; title: string; updated_at?: string;
+        };
+        Update: {
+          created_at?: string; current_version_id?: string | null; id?: string; kind?: Enums["script_kind"]; language?: string;
+          owner_id?: string; project_id?: string; title?: string; updated_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: "scripts_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "projects"; referencedColumns: ["id"] },
+          { foreignKeyName: "scripts_current_version_fk"; columns: ["current_version_id"]; isOneToOne: false; referencedRelation: "script_versions"; referencedColumns: ["id"] },
+        ];
+      };
+      script_versions: {
+        Row: { content: Json; created_at: string; id: string; owner_id: string; revision_color: string; script_id: string; version_number: number };
+        Insert: { content?: Json; created_at?: string; id?: string; owner_id?: string; revision_color?: string; script_id: string; version_number: number };
+        Update: { content?: Json; created_at?: string; id?: string; owner_id?: string; revision_color?: string; script_id?: string; version_number?: number };
+        Relationships: [
+          { foreignKeyName: "script_versions_script_id_fkey"; columns: ["script_id"]; isOneToOne: false; referencedRelation: "scripts"; referencedColumns: ["id"] },
+        ];
+      };
+      scenes: {
+        Row: {
+          created_at: string; day_night: Enums["day_night"]; id: string; int_ext: Enums["int_ext"]; location_name: string | null; owner_id: string;
+          page_eighths: number; position: number; scene_number: string; script_id: string; synopsis: string | null; updated_at: string;
+        };
+        Insert: {
+          created_at?: string; day_night?: Enums["day_night"]; id?: string; int_ext?: Enums["int_ext"]; location_name?: string | null; owner_id?: string;
+          page_eighths?: number; position?: number; scene_number: string; script_id: string; synopsis?: string | null; updated_at?: string;
+        };
+        Update: {
+          created_at?: string; day_night?: Enums["day_night"]; id?: string; int_ext?: Enums["int_ext"]; location_name?: string | null; owner_id?: string;
+          page_eighths?: number; position?: number; scene_number?: string; script_id?: string; synopsis?: string | null; updated_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: "scenes_script_id_fkey"; columns: ["script_id"]; isOneToOne: false; referencedRelation: "scripts"; referencedColumns: ["id"] },
+        ];
+      };
       tasks: {
         Row: {
           assignee_contact_id: string | null; created_at: string; due_date: string | null; id: string; owner_id: string;
@@ -85,6 +131,10 @@ export type Project = T["projects"]["Row"];
 export type Task = T["tasks"]["Row"];
 export type Contact = T["contacts"]["Row"];
 export type Profile = T["profiles"]["Row"];
+export type Script = T["scripts"]["Row"];
+export type ScriptVersion = T["script_versions"]["Row"];
+export type Scene = T["scenes"]["Row"];
+export type ScriptKind = Enums["script_kind"];
 export type ProjectType = Enums["project_type"];
 export type ProjectStage = Enums["project_stage"];
 export type TaskStatus = Enums["task_status"];

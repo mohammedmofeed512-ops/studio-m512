@@ -11,7 +11,7 @@ export function ProjectSidebar({ projectId, active, t }: { projectId: string; ac
   const p = t.projects;
   const tools: Tool[] = [
     { key: "overview", label: p.overview, href: `/projects/${projectId}` },
-    { key: "script", label: p.script, phase: 2 },
+    { key: "script", label: p.script, href: `/projects/${projectId}/scripts` },
     { key: "breakdown", label: p.breakdown, phase: 3 },
     { key: "shots", label: p.shots, phase: 3 },
     { key: "schedule", label: p.schedule, phase: 4 },
