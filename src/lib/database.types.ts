@@ -267,6 +267,30 @@ export type Database = {
           { foreignKeyName: "script_presence_script_id_fkey"; columns: ["script_id"]; isOneToOne: false; referencedRelation: "scripts"; referencedColumns: ["id"] },
         ];
       };
+      plans: {
+        Row: {
+          created_at: string; features: Json; id: string; is_default: boolean; max_members_per_project: number | null; max_projects: number | null;
+          name_ar: string; name_en: string; position: number; storage_mb: number | null; updated_at: string;
+        };
+        Insert: {
+          created_at?: string; features?: Json; id: string; is_default?: boolean; max_members_per_project?: number | null; max_projects?: number | null;
+          name_ar: string; name_en: string; position?: number; storage_mb?: number | null; updated_at?: string;
+        };
+        Update: {
+          created_at?: string; features?: Json; id?: string; is_default?: boolean; max_members_per_project?: number | null; max_projects?: number | null;
+          name_ar?: string; name_en?: string; position?: number; storage_mb?: number | null; updated_at?: string;
+        };
+        Relationships: [];
+      };
+      accounts: {
+        Row: {
+          created_at: string; extra_members: number; extra_projects: number; extra_storage_mb: number; feature_overrides: Json; notes: string | null;
+          plan_expires_at: string | null; plan_id: string; role: string; suspended: boolean; updated_at: string; user_id: string;
+        };
+        Insert: { user_id: string; plan_id?: string };
+        Update: { plan_id?: string };
+        Relationships: [];
+      };
       tasks: {
         Row: {
           assignee_contact_id: string | null; created_at: string; due_date: string | null; id: string; owner_id: string;
@@ -295,6 +319,23 @@ export type Database = {
       call_sheet_confirm: { Args: { p_token: string }; Returns: boolean };
       invitation_preview: { Args: { p_token: string }; Returns: Json };
       accept_invitation: { Args: { p_token: string }; Returns: Json };
+      my_plan: { Args: Record<string, never>; Returns: Json };
+      admin_stats: { Args: Record<string, never>; Returns: Json };
+      admin_accounts: {
+        Args: Record<string, never>;
+        Returns: Array<{
+          user_id: string; email: string; full_name: string | null; company_name: string | null; plan_id: string; plan_expires_at: string | null;
+          role: string; suspended: boolean; extra_projects: number; extra_members: number; extra_storage_mb: number; notes: string | null;
+          projects: number; storage_bytes: number; created_at: string; last_sign_in_at: string | null;
+        }>;
+      };
+      admin_update_account: {
+        Args: {
+          p_user: string; p_plan: string; p_expires: string | null; p_role: string; p_suspended: boolean;
+          p_extra_projects: number; p_extra_members: number; p_extra_storage_mb: number; p_notes: string;
+        };
+        Returns: undefined;
+      };
     };
     Enums: Enums;
     CompositeTypes: { [_ in never]: never };
@@ -315,6 +356,7 @@ export type Shot = T["shots"]["Row"];
 export type LookbookItem = T["lookbook_items"]["Row"];
 export type ElementCategory = Enums["element_category"];
 export type ShootDay = T["shoot_days"]["Row"];
+export type Plan = T["plans"]["Row"];
 export type CallSheet = T["call_sheets"]["Row"];
 export type CallSheetRecipient = T["call_sheet_recipients"]["Row"];
 export type RecipientStatus = Enums["recipient_status"];

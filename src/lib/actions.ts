@@ -121,6 +121,7 @@ export async function createProject(_prev: FormState, fd: FormData): Promise<For
     .insert({ ...fields, name: fields.name, cover_color })
     .select("id")
     .single();
+  if (error?.message.includes("plan_limit:projects")) return { error: "limitProjects" };
   if (error || !data) return { error: "failed" };
   revalidatePath("/", "layout");
   redirect(`/projects/${data.id}`);
@@ -132,6 +133,7 @@ export async function updateProject(_prev: FormState, fd: FormData): Promise<For
   const fields = projectFields(fd);
   if (!id || !fields.name) return { error: "name" };
   const { error } = await supabase.from("projects").update({ ...fields, name: fields.name }).eq("id", id);
+  if (error?.message.includes("plan_limit:projects")) return { error: "limitProjects" };
   if (error) return { error: "failed" };
   revalidatePath("/", "layout");
   return { message: "saved" };

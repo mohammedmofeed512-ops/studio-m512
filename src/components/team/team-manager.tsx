@@ -7,7 +7,7 @@ import { fill, whatsappLink } from "@/lib/production/schedule";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { LevelsMatrix } from "./levels-matrix";
 
-type Labels = Pick<Dictionary, "team" | "areas" | "roles" | "common">;
+type Labels = Pick<Dictionary, "team" | "areas" | "roles" | "common" | "plan">;
 export type MemberRow = { userId: string; name: string; role: string; permissions: unknown; isYou: boolean };
 export type InvitationRow = { id: string; email: string; role: string; token: string; expiresAt: string; expired: boolean };
 
@@ -177,7 +177,7 @@ export function TeamManager({
                   if (r.ok) {
                     setResult({ token: r.token, email });
                     setEmail("");
-                  } else setError(r.error === "email" ? t.team.invalidEmail : t.team.failed);
+                  } else setError(r.error === "email" ? t.team.invalidEmail : r.error === "limit" ? t.plan.limitMembers : t.team.failed);
                 });
               }}
             >

@@ -23,14 +23,14 @@ export function LookbookBoard({ projectId, userId, items, t }: { projectId: stri
     if (!files?.length) return;
     setStatus(t.shots.uploading);
     const paths: string[] = [];
-    let failed = false;
+    let failed: string | null = null;
     for (const file of Array.from(files).slice(0, 30)) {
       const res = await uploadImage(file, userId, `${projectId}/lookbook`);
       if (res.ok) paths.push(res.path);
-      else failed = true;
+      else failed = res.reason === "storageFull" ? t.shots.storageFull : t.shots.uploadFailed;
     }
     if (paths.length) await addLookbookItems({ projectId, paths, category: group });
-    setStatus(failed ? t.shots.uploadFailed : "");
+    setStatus(failed ?? "");
     router.refresh();
   }
 

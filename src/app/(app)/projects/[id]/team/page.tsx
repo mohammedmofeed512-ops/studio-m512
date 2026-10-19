@@ -66,7 +66,7 @@ export default async function TeamPage({ params }: PageProps<"/projects/[id]/tea
               expired: isPast(i.expires_at),
             }))}
             canManage={canManage}
-            t={{ team: t.team, areas: t.areas, roles: t.roles, common: t.common }}
+            t={{ team: t.team, areas: t.areas, roles: t.roles, common: t.common, plan: t.plan }}
           />
         </main>
       </div>

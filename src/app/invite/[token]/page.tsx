@@ -72,7 +72,7 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
               </form>
             </div>
           ) : (
-            <AcceptButton token={token} label={i.accept} errors={{ invalid: i.invalid, expired: i.expired, used: i.used, email: fill(i.wrongEmail, { current: myEmail, email: inv.email }) }} />
+            <AcceptButton token={token} label={i.accept} errors={{ invalid: i.invalid, expired: i.expired, used: i.used, limit: t.plan.limitMembers, email: fill(i.wrongEmail, { current: myEmail, email: inv.email }) }} />
           )}
         </div>
       </>

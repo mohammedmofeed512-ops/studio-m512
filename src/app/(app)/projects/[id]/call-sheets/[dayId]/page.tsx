@@ -242,6 +242,7 @@ export default async function CallSheetPage({ params }: PageProps<"/projects/[id
             contacts={contacts ?? []}
             t={cs}
             kinds={t.contactKinds}
+            planLabels={t.plan}
           />
         </main>
         </EditGate>

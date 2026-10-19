@@ -71,7 +71,13 @@ export function ProjectForm({ t, project }: { t: Dictionary; project?: Project }
           {project ? t.common.save : p.create}
         </button>
         <p role="status" className={`text-[12px] ${state?.error ? "text-warn" : "text-ok"}`}>
-          {state?.message === "saved" ? t.settings.saved : state?.error ? t.login.failed : ""}
+          {state?.message === "saved"
+            ? t.settings.saved
+            : state?.error === "limitProjects"
+              ? t.plan.limitProjects
+              : state?.error
+                ? t.login.failed
+                : ""}
         </p>
       </div>
     </form>

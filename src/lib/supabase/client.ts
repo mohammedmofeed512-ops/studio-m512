@@ -14,7 +14,7 @@ export function browserClient() {
 const MAX_BYTES = 10 * 1024 * 1024;
 const TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
-export type UploadResult = { ok: true; path: string } | { ok: false; reason: "tooLarge" | "type" | "failed" };
+export type UploadResult = { ok: true; path: string } | { ok: false; reason: "tooLarge" | "type" | "failed" | "storageFull" };
 
 /** Uploads an image into the user's own folder of the private media bucket. */
 export async function uploadImage(file: File, userId: string, folder: string): Promise<UploadResult> {
@@ -23,5 +23,7 @@ export async function uploadImage(file: File, userId: string, folder: string): P
   const ext = file.type.split("/")[1].replace("jpeg", "jpg");
   const path = `${userId}/${folder}/${crypto.randomUUID()}.${ext}`;
   const { error } = await browserClient().storage.from("media").upload(path, file, { contentType: file.type, upsert: false });
-  return error ? { ok: false, reason: "failed" } : { ok: true, path };
+  // The only rule that can refuse an upload into your own folder is the plan's storage allowance.
+  if (error) return { ok: false, reason: /row-level security|policy/i.test(error.message) ? "storageFull" : "failed" };
+  return { ok: true, path };
 }

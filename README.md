@@ -42,7 +42,8 @@ the `authz` schema; crew call sheet links use token-checked security-definer fun
 | 2 | Arabic screenplay editor, AV scripts, import, PDF export, revisions | ✅ |
 | 3 | Breakdown, shot lists, storyboards, lookbooks | ✅ |
 | 4 | Stripboard, shoot days, call sheets, sending and tracking; quick-jump (Ctrl+K) and Alt+number navigation | ✅ |
-| 5 | Teams: invitations, per-tool permissions, presence, activity | ✅ (pending deploy) |
+| 5 | Teams: invitations, per-tool permissions, presence, activity | ✅ |
+| 5b | Admin panel: plans, limits enforced in the database, accounts, suspension | ✅ |
 | 6 | Claude inside the platform (each member's own API key) | next |
 | 7 | Client share links, comments and approvals, mobile polish | |
 | later | Budget and crew rates | |

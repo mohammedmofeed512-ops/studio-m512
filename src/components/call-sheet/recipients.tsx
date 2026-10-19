@@ -34,6 +34,7 @@ export function Recipients({
   contacts,
   t,
   kinds,
+  planLabels,
 }: {
   projectId: string;
   callSheetId: string;
@@ -44,6 +45,7 @@ export function Recipients({
   contacts: Array<{ id: string; full_name: string; kind: ContactKind; role: string | null }>;
   t: Dictionary["callSheets"];
   kinds: Dictionary["contactKinds"];
+  planLabels: Dictionary["plan"];
 }) {
   const [pending, start] = useTransition();
   const [copied, setCopied] = useState<string | null>(null);
@@ -58,7 +60,13 @@ export function Recipients({
   const markSent = (r: Recipient) => {
     if (r.status === "pending") start(() => updateRecipient({ projectId, id: r.id, sent: true }));
   };
-  const add = (ids: string[]) => ids.length && start(() => addRecipients({ projectId, callSheetId, contactIds: ids, callTime: generalCall }));
+  const [notice, setNotice] = useState("");
+  const add = (ids: string[]) =>
+    ids.length &&
+    start(async () => {
+      const r = await addRecipients({ projectId, callSheetId, contactIds: ids, callTime: generalCall });
+      setNotice(!r.ok && "error" in r && r.error === "featureCallSheets" ? planLabels.featureCallSheets : "");
+    });
 
   return (
     <section aria-labelledby="rec-h" className="card overflow-hidden">
@@ -99,6 +107,11 @@ export function Recipients({
         ) : null}
       </div>
 
+      {notice ? (
+        <p role="alert" className="border-b border-line bg-warn-tint px-6 py-2.5 text-[12px] font-bold text-warn">
+          {notice}
+        </p>
+      ) : null}
       {!recipients.length ? <p className="px-6 py-10 text-center text-muted">{t.noRecipients}</p> : null}
       <ul>
         {recipients.map((r) => (

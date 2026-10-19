@@ -141,16 +141,18 @@ export async function saveCallSheet(formData: FormData) {
 
 export async function addRecipients(input: { projectId: string; callSheetId: string; contactIds: string[]; callTime?: string | null }) {
   const { supabase } = await requireUser();
-  if (!isId(input.projectId) || !isId(input.callSheetId)) return;
+  if (!isId(input.projectId) || !isId(input.callSheetId)) return { ok: false as const };
   const ids = [...new Set(input.contactIds.filter(isId))].slice(0, 300);
-  if (!ids.length) return;
-  await supabase
+  if (!ids.length) return { ok: false as const };
+  const { error } = await supabase
     .from("call_sheet_recipients")
     .upsert(ids.map((contact_id) => ({ call_sheet_id: input.callSheetId, contact_id, call_time: time(input.callTime) })), {
       onConflict: "call_sheet_id,contact_id",
       ignoreDuplicates: true,
     });
   revalidate(input.projectId);
+  if (error?.message.includes("plan_feature:call_sheets")) return { ok: false as const, error: "featureCallSheets" as const };
+  return { ok: !error };
 }
 
 export async function updateRecipient(input: { projectId: string; id: string; call_time?: string; sent?: boolean }) {

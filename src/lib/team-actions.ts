@@ -10,7 +10,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isId = (v: unknown): v is string => typeof v === "string" && UUID.test(v);
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export type InviteResult = { ok: true; token: string } | { ok: false; error: "email" | "failed" };
+export type InviteResult = { ok: true; token: string } | { ok: false; error: "email" | "failed" | "limit" };
 
 /** Creates an invitation (the database only allows it for people who may manage the team). */
 export async function inviteMember(input: { projectId: string; email: string; role: string; permissions: unknown }): Promise<InviteResult> {
@@ -25,6 +25,7 @@ export async function inviteMember(input: { projectId: string; email: string; ro
     .insert({ project_id: input.projectId, email, role, permissions: levels })
     .select("token")
     .single();
+  if (error?.message.includes("plan_limit:members")) return { ok: false, error: "limit" };
   if (error || !data) {
     console.error("inviteMember", error);
     return { ok: false, error: "failed" };
@@ -77,6 +78,7 @@ export async function acceptInvitation(token: string): Promise<AcceptResult> {
   if (typeof token !== "string" || !/^[0-9a-f]{48}$/.test(token)) return { ok: false, error: "invalid" };
   const { data, error } = await supabase.rpc("accept_invitation", { p_token: token });
   const res = data as { ok?: boolean; project_id?: string; error?: string } | null;
+  if (error?.message.includes("plan_limit:members")) return { ok: false, error: "limit" };
   if (error || !res?.ok || !res.project_id) return { ok: false, error: res?.error ?? "invalid" };
   revalidatePath("/", "layout");
   return { ok: true, projectId: res.project_id };

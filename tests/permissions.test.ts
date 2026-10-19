@@ -19,3 +19,12 @@ test("roles are recognised from their levels, anything else is custom", () => {
   // Only producers manage the team by default.
   for (const [role, levels] of Object.entries(ROLE_PRESETS)) if (role !== "producer") assert.equal(levels.team, 0, role);
 });
+
+test("plan errors from the database map to messages", async () => {
+  const { planError, formatBytes } = await import("../src/lib/plan");
+  assert.equal(planError('new row violates: plan_limit:projects'), "limitProjects");
+  assert.equal(planError("plan_limit:members"), "limitMembers");
+  assert.equal(planError("plan_feature:call_sheets"), "featureCallSheets");
+  assert.equal(planError("something else"), null);
+  assert.equal(formatBytes(200 * 1024 * 1024), "200.0 MB");
+});

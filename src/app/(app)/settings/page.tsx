@@ -5,6 +5,7 @@ import { IconSettings } from "@/components/icons";
 import { setLocale, signOut } from "@/lib/actions";
 import { getI18n } from "@/lib/i18n/server";
 import { getViewer } from "@/lib/viewer";
+import { MyPlanCard } from "@/components/my-plan-card";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -26,6 +27,8 @@ export default async function SettingsPage() {
             <ProfileForm t={t} fullName={viewer.profile?.full_name ?? ""} company={viewer.company} />
           </div>
         </section>
+
+        <MyPlanCard />
 
         <section aria-labelledby="lang-h" className="card self-start overflow-hidden">
           <div className="card-head">

@@ -62,7 +62,7 @@ export function ShotBoard({
     setUploading(shotId);
     const res = await uploadImage(file, userId, `${projectId}/shots`);
     if (!res.ok) {
-      setError(res.reason === "tooLarge" ? s.tooLarge : s.uploadFailed);
+      setError(res.reason === "tooLarge" ? s.tooLarge : res.reason === "storageFull" ? s.storageFull : s.uploadFailed);
       setUploading(null);
       return;
     }

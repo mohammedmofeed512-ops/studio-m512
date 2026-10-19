@@ -80,3 +80,9 @@ export const IconArchive = (p: IconProps) => (
     <path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4" />
   </svg>
 );
+export const IconAdmin = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" />
+    <path d="M9 12l2 2 4-4" />
+  </svg>
+);
