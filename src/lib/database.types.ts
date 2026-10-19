@@ -302,6 +302,12 @@ export type Database = {
         Update: { status?: string };
         Relationships: [];
       };
+      notifications: {
+        Row: { created_at: string; data: Json; id: string; kind: string; link: string | null; read_at: string | null; user_id: string };
+        Insert: never;
+        Update: { read_at?: string | null };
+        Relationships: [];
+      };
       tasks: {
         Row: {
           assignee_contact_id: string | null; created_at: string; due_date: string | null; id: string; owner_id: string;

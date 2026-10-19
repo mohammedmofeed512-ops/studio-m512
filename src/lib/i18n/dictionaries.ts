@@ -627,6 +627,16 @@ const ar = {
     from: "من",
     to: "إلى",
   },
+  notifications: {
+    title: "الإشعارات",
+    empty: "لا إشعارات بعد.",
+    markAll: "تعليم الكل كمقروء",
+    upgrade_approved: "تمت ترقية حسابك إلى باقة «{plan}»{until}. استمتع بالمزايا الجديدة!",
+    upgrade_rejected: "لم تُقبل ترقية حسابك إلى باقة «{plan}». يمكنك التواصل مع الإدارة أو إرسال طلب جديد.",
+    member_joined: "{name} انضم إلى مشروع «{project}».",
+    until: " حتى {date}",
+    someone: "عضو جديد",
+  },
   settings: {
     title: "الإعدادات",
     profile: "الملف الشخصي",
@@ -1266,6 +1276,16 @@ const en: Dictionary = {
     months: "{n} months",
     from: "from",
     to: "to",
+  },
+  notifications: {
+    title: "Notifications",
+    empty: "No notifications yet.",
+    markAll: "Mark all as read",
+    upgrade_approved: "Your account was upgraded to the “{plan}” plan{until}. Enjoy the new features!",
+    upgrade_rejected: "Your upgrade to “{plan}” wasn't approved. Contact the admins or send a new request.",
+    member_joined: "{name} joined “{project}”.",
+    until: " until {date}",
+    someone: "A new member",
   },
   settings: {
     title: "Settings",

@@ -17,6 +17,7 @@ export function Topbar({
   company,
   signOutLabel,
   paletteLabel,
+  bell,
 }: {
   crumbs: ReactNode;
   locale: Locale;
@@ -24,6 +25,7 @@ export function Topbar({
   company: string;
   signOutLabel: string;
   paletteLabel: string;
+  bell?: ReactNode;
 }) {
   const other: Locale = locale === "ar" ? "en" : "ar";
   return (
@@ -31,6 +33,7 @@ export function Topbar({
       <div className="min-w-0 truncate text-[13px] font-semibold">{crumbs}</div>
       <div className="flex items-center gap-2.5">
         <PaletteButton label={paletteLabel} />
+        {bell}
         <form action={setLocale}>
           <input type="hidden" name="locale" value={other} />
           <button className="btn-soft" aria-label={other === "en" ? "Switch to English" : "التبديل إلى العربية"}>

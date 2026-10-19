@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>أهلاً بك في Studio M512</title>
+  </head>
+  <body style="margin:0;padding:0;background:#F6F6F9;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F6F9;padding:32px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border-radius:14px;overflow:hidden;font-family:Tahoma,'Segoe UI',Arial,sans-serif;color:#1B1C21;direction:rtl;text-align:right;">
+            <tr>
+              <td style="background:#1D1E2C;padding:22px 32px;">
+                <span style="display:inline-block;background:#5D78FF;color:#FFFFFF;font-weight:bold;font-size:13px;border-radius:8px;padding:6px 10px;font-family:Arial,sans-serif;" dir="ltr">M512</span>
+                <span style="color:#FFFFFF;font-size:18px;font-weight:bold;margin-right:10px;font-family:Arial,sans-serif;" dir="ltr">Studio M512</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:36px 32px 8px;">
+                <h1 style="margin:0 0 16px;font-size:22px;line-height:1.5;">أهلاً بك{{ if .Data.full_name }} يا {{ .Data.full_name }}{{ end }} في Studio M512 🎬</h1>
+                <p style="margin:0 0 14px;font-size:15px;line-height:1.9;color:#4A4E5C;">
+                  أنا محمد مفيد، أسّستُ هذه المنصة لتكون بيتاً للمبدعين: كتّاب السيناريو والمخرجين وصنّاع المحتوى وفرق الإنتاج.
+                  سعيد جداً بانضمامك، ويسعدني أن تكون قصتك القادمة من هنا.
+                </p>
+                <p style="margin:0 0 26px;font-size:15px;line-height:1.9;color:#4A4E5C;">
+                  خطوة واحدة تفصلك عن البدء: أكّد بريدك الإلكتروني من الزر أدناه.
+                </p>
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
+                  <tr>
+                    <td style="background:#5D78FF;border-radius:8px;">
+                      <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 30px;color:#FFFFFF;font-size:15px;font-weight:bold;text-decoration:none;">تأكيد البريد والدخول إلى المنصة</a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:0 0 10px;font-size:14px;font-weight:bold;">ما الذي ينتظرك؟</p>
+                <ul style="margin:0 0 26px;padding:0 20px 0 0;font-size:14px;line-height:2;color:#4A4E5C;">
+                  <li>محرر سيناريو عربي بالهوامش والترقيم الاحترافي، واستيراد من Word وPDF وFinal Draft.</li>
+                  <li>تفريغ المشاهد، وقوائم اللقطات والستوري بورد.</li>
+                  <li>جدول التصوير وأوراق الاستدعاء ترسلها لفريقك بضغطة.</li>
+                  <li>ادعُ فريقك للعمل معك على المشروع بصلاحيات تحددها أنت.</li>
+                </ul>
+                <p style="margin:0 0 4px;font-size:15px;line-height:1.8;">مع خالص التقدير،</p>
+                <p style="margin:0 0 30px;font-size:15px;font-weight:bold;">محمد مفيد<br /><span style="font-weight:normal;color:#6B7083;font-size:13px;">مؤسس Studio M512</span></p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 32px 26px;border-top:1px solid #EDEEF3;font-size:12px;line-height:1.8;color:#8A8FA3;">
+                إن لم يعمل الزر، انسخ هذا الرابط في المتصفح:<br />
+                <a href="{{ .ConfirmationURL }}" style="color:#4560E6;word-break:break-all;" dir="ltr">{{ .ConfirmationURL }}</a><br /><br />
+                وصلتك هذه الرسالة لأن بريدك استُخدم للتسجيل في Studio M512. إن لم تكن أنت، تجاهلها ولن يُنشأ أي حساب.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
