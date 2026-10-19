@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { createProject, updateProject, type FormState } from "@/lib/actions";
 import { PROJECT_STAGES, PROJECT_TYPES, type Project } from "@/lib/database.types";
@@ -74,7 +75,14 @@ export function ProjectForm({ t, project }: { t: Dictionary; project?: Project }
           {state?.message === "saved"
             ? t.settings.saved
             : state?.error === "limitProjects"
-              ? t.plan.limitProjects
+              ? (
+                  <>
+                    {t.plan.limitProjects}{" "}
+                    <Link href="/plans" className="font-bold underline">
+                      {t.plan.viewPlans}
+                    </Link>
+                  </>
+                )
               : state?.error
                 ? t.login.failed
                 : ""}

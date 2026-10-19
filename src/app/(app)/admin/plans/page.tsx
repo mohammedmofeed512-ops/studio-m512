@@ -40,6 +40,11 @@ export default async function AdminPlansPage() {
               claude: Boolean(f.claude),
               is_default: p.is_default,
               position: p.position,
+              price_ar: p.price_ar ?? "",
+              price_en: p.price_en ?? "",
+              description_ar: p.description_ar ?? "",
+              description_en: p.description_en ?? "",
+              highlight: p.highlight,
             };
           })}
         />

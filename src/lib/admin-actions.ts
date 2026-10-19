@@ -9,6 +9,7 @@ const int = (v: unknown) => {
   const n = Math.floor(Number(v));
   return Number.isFinite(n) && n > 0 ? Math.min(n, 1_000_000) : 0;
 };
+const text = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 const optInt = (v: unknown) => (v === "" || v === null || v === undefined ? null : int(v));
 
 export type AdminResult = { ok: true } | { ok: false; error: "selfDemote" | "failed" };
@@ -57,6 +58,11 @@ export async function savePlan(input: {
   claude: boolean;
   is_default: boolean;
   position: number;
+  price_ar?: string;
+  price_en?: string;
+  description_ar?: string;
+  description_en?: string;
+  highlight?: boolean;
 }): Promise<AdminResult> {
   const { supabase } = await requireUser();
   const id = String(input.id).toLowerCase().trim();
@@ -78,6 +84,11 @@ export async function savePlan(input: {
     features: { call_sheets: Boolean(input.call_sheets), claude: Boolean(input.claude) },
     is_default: Boolean(input.is_default),
     position: int(input.position),
+    price_ar: text(input.price_ar, 60),
+    price_en: text(input.price_en, 60),
+    description_ar: text(input.description_ar, 300),
+    description_en: text(input.description_en, 300),
+    highlight: Boolean(input.highlight),
   });
   if (error) return { ok: false, error: "failed" };
   revalidatePath("/admin", "layout");

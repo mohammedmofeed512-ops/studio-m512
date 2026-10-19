@@ -271,10 +271,12 @@ export type Database = {
         Row: {
           created_at: string; features: Json; id: string; is_default: boolean; max_members_per_project: number | null; max_projects: number | null;
           name_ar: string; name_en: string; position: number; storage_mb: number | null; updated_at: string;
+          price_ar: string | null; price_en: string | null; description_ar: string | null; description_en: string | null; highlight: boolean;
         };
         Insert: {
           created_at?: string; features?: Json; id: string; is_default?: boolean; max_members_per_project?: number | null; max_projects?: number | null;
           name_ar: string; name_en: string; position?: number; storage_mb?: number | null; updated_at?: string;
+          price_ar?: string | null; price_en?: string | null; description_ar?: string | null; description_en?: string | null; highlight?: boolean;
         };
         Update: {
           created_at?: string; features?: Json; id?: string; is_default?: boolean; max_members_per_project?: number | null; max_projects?: number | null;

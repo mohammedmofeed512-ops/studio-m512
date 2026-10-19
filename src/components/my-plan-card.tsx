@@ -1,7 +1,8 @@
 import { getI18n } from "@/lib/i18n/server";
 import { getPlan, getViewer } from "@/lib/viewer";
 import { formatBytes } from "@/lib/plan";
-import { UpgradeRequest } from "./upgrade-request";
+import Link from "next/link";
+import { fill } from "@/lib/production/schedule";
 
 function Meter({ label, used, max, unlimited, format = String }: { label: string; used: number; max: number | null; unlimited: string; format?: (n: number) => string }) {
   const pct = max ? Math.min(100, Math.round((used / max) * 100)) : 0;
@@ -33,8 +34,6 @@ export async function MyPlanCard() {
     return row ? (locale === "ar" ? row.name_ar : row.name_en) : id;
   };
   const name = nameOf(plan.plan);
-  const current = plans?.find((x) => x.id === plan.plan);
-  const higher = (plans ?? []).filter((x) => x.id !== plan.plan && x.position >= (current?.position ?? 0)).map((x) => ({ id: x.id, name: nameOf(x.id) }));
   const last = requests?.[0];
   return (
     <section aria-labelledby="plan-h" className="card self-start overflow-hidden">
@@ -70,12 +69,14 @@ export async function MyPlanCard() {
         </ul>
         <div className="border-t border-line pt-3">
           <p className="mb-2 text-[11px] text-faint">{p.upgradeHint}</p>
-          <UpgradeRequest
-            plans={higher}
-            pending={last?.status === "pending" ? { id: last.id, planName: nameOf(last.plan_id) } : null}
-            lastRejected={last?.status === "rejected"}
-            t={p}
-          />
+          {last?.status === "pending" ? (
+            <p className="mb-2 rounded-lg bg-tint px-3 py-2 text-[12px] font-bold text-accent-ink">{fill(p.pending, { plan: nameOf(last.plan_id) })}</p>
+          ) : last?.status === "rejected" ? (
+            <p className="mb-2 text-[11px] text-warn">{p.rejected}</p>
+          ) : null}
+          <Link href="/plans" className="btn-primary">
+            {p.viewPlans}
+          </Link>
         </div>
       </div>
     </section>
