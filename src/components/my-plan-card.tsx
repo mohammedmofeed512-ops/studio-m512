@@ -1,6 +1,7 @@
 import { getI18n } from "@/lib/i18n/server";
 import { getPlan, getViewer } from "@/lib/viewer";
 import { formatBytes } from "@/lib/plan";
+import { UpgradeRequest } from "./upgrade-request";
 
 function Meter({ label, used, max, unlimited, format = String }: { label: string; used: number; max: number | null; unlimited: string; format?: (n: number) => string }) {
   const pct = max ? Math.min(100, Math.round((used / max) * 100)) : 0;
@@ -21,10 +22,20 @@ function Meter({ label, used, max, unlimited, format = String }: { label: string
 
 /** The signed-in user's plan, what it allows and how much is used. */
 export async function MyPlanCard() {
-  const [{ t, locale, formatDate }, plan, { supabase }] = await Promise.all([getI18n(), getPlan(), getViewer()]);
-  const { data: row } = await supabase.from("plans").select("name_ar, name_en").eq("id", plan.plan).maybeSingle();
+  const [{ t, locale, formatDate }, plan, { supabase, userId }] = await Promise.all([getI18n(), getPlan(), getViewer()]);
+  const [{ data: plans }, { data: requests }] = await Promise.all([
+    supabase.from("plans").select("id, name_ar, name_en, position").order("position"),
+    supabase.from("upgrade_requests").select("id, plan_id, status").eq("user_id", userId).order("created_at", { ascending: false }).limit(1),
+  ]);
   const p = t.plan;
-  const name = row ? (locale === "ar" ? row.name_ar : row.name_en) : plan.plan;
+  const nameOf = (id: string) => {
+    const row = plans?.find((x) => x.id === id);
+    return row ? (locale === "ar" ? row.name_ar : row.name_en) : id;
+  };
+  const name = nameOf(plan.plan);
+  const current = plans?.find((x) => x.id === plan.plan);
+  const higher = (plans ?? []).filter((x) => x.id !== plan.plan && x.position >= (current?.position ?? 0)).map((x) => ({ id: x.id, name: nameOf(x.id) }));
+  const last = requests?.[0];
   return (
     <section aria-labelledby="plan-h" className="card self-start overflow-hidden">
       <div className="card-head">
@@ -57,7 +68,15 @@ export async function MyPlanCard() {
             </li>
           ))}
         </ul>
-        <p className="text-[11px] text-faint">{p.upgradeHint}</p>
+        <div className="border-t border-line pt-3">
+          <p className="mb-2 text-[11px] text-faint">{p.upgradeHint}</p>
+          <UpgradeRequest
+            plans={higher}
+            pending={last?.status === "pending" ? { id: last.id, planName: nameOf(last.plan_id) } : null}
+            lastRejected={last?.status === "rejected"}
+            t={p}
+          />
+        </div>
       </div>
     </section>
   );

@@ -291,6 +291,15 @@ export type Database = {
         Update: { plan_id?: string };
         Relationships: [];
       };
+      upgrade_requests: {
+        Row: {
+          created_at: string; handled_at: string | null; handled_by: string | null; id: string; message: string | null;
+          plan_id: string; status: string; user_id: string;
+        };
+        Insert: { message?: string | null; plan_id: string; user_id?: string };
+        Update: { status?: string };
+        Relationships: [];
+      };
       tasks: {
         Row: {
           assignee_contact_id: string | null; created_at: string; due_date: string | null; id: string; owner_id: string;
@@ -320,6 +329,7 @@ export type Database = {
       invitation_preview: { Args: { p_token: string }; Returns: Json };
       accept_invitation: { Args: { p_token: string }; Returns: Json };
       my_plan: { Args: Record<string, never>; Returns: Json };
+      admin_handle_upgrade: { Args: { p_request: string; p_approve: boolean; p_months: number }; Returns: undefined };
       admin_stats: { Args: Record<string, never>; Returns: Json };
       admin_accounts: {
         Args: Record<string, never>;

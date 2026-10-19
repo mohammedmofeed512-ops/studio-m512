@@ -83,3 +83,30 @@ export async function savePlan(input: {
   revalidatePath("/admin", "layout");
   return { ok: true };
 }
+
+export async function handleUpgrade(requestId: string, approve: boolean, months: number): Promise<AdminResult> {
+  const { supabase } = await requireUser();
+  if (!UUID.test(requestId)) return { ok: false, error: "failed" };
+  const { error } = await supabase.rpc("admin_handle_upgrade", { p_request: requestId, p_approve: Boolean(approve), p_months: int(months) });
+  if (error) return { ok: false, error: "failed" };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** A user asks to move to another plan. */
+export async function requestUpgrade(planId: string, message: string) {
+  const { supabase } = await requireUser();
+  if (!/^[a-z0-9_]{2,32}$/.test(planId)) return { ok: false };
+  const { error } = await supabase.from("upgrade_requests").insert({ plan_id: planId, message: typeof message === "string" ? message.trim().slice(0, 1000) || null : null });
+  revalidatePath("/settings");
+  revalidatePath("/admin");
+  return { ok: !error };
+}
+
+export async function withdrawUpgrade(requestId: string) {
+  const { supabase } = await requireUser();
+  if (!UUID.test(requestId)) return;
+  await supabase.from("upgrade_requests").delete().eq("id", requestId).eq("status", "pending");
+  revalidatePath("/settings");
+  revalidatePath("/admin");
+}

@@ -4,6 +4,7 @@ import { PageHeader, SubToolbar } from "@/components/page-header";
 import { IconAdmin } from "@/components/icons";
 import { AdminTabs } from "@/components/admin/admin-tabs";
 import { AccountsTable, type AccountRow } from "@/components/admin/accounts-table";
+import { UpgradeRequests } from "@/components/admin/upgrade-requests";
 import { formatBytes } from "@/lib/plan";
 import { getI18n } from "@/lib/i18n/server";
 import { getPlan, getViewer } from "@/lib/viewer";
@@ -13,10 +14,11 @@ export const metadata: Metadata = { title: "Admin" };
 export default async function AdminPage() {
   const [{ t, locale, intlLocale }, me, { supabase }] = await Promise.all([getI18n(), getPlan(), getViewer()]);
   if (me.role === "user") notFound();
-  const [{ data: stats }, { data: accounts }, { data: plans }] = await Promise.all([
+  const [{ data: stats }, { data: accounts }, { data: plans }, { data: requests }] = await Promise.all([
     supabase.rpc("admin_stats"),
     supabase.rpc("admin_accounts"),
     supabase.from("plans").select("id, name_ar, name_en").order("position"),
+    supabase.from("upgrade_requests").select("id, user_id, plan_id, message, created_at").eq("status", "pending").order("created_at"),
   ]);
   const a = t.admin;
   const s = (stats ?? {}) as Record<string, number | Record<string, number>>;
@@ -59,6 +61,22 @@ export default async function AdminPage() {
             </ul>
           </div>
         </section>
+        <UpgradeRequests
+          canEdit={me.role === "admin"}
+          t={a}
+          rows={(requests ?? []).map((r) => {
+            const acc = (accounts ?? []).find((x) => x.user_id === r.user_id);
+            return {
+              id: r.id,
+              name: acc?.full_name || acc?.company_name || "—",
+              email: acc?.email ?? "",
+              fromPlan: planList.find((p) => p.id === acc?.plan_id)?.name ?? acc?.plan_id ?? "",
+              toPlan: planList.find((p) => p.id === r.plan_id)?.name ?? r.plan_id,
+              message: r.message,
+              createdAt: new Intl.DateTimeFormat(intlLocale, { day: "numeric", month: "short" }).format(new Date(r.created_at)),
+            };
+          })}
+        />
         <AccountsTable rows={(accounts ?? []) as AccountRow[]} plans={planList} canEdit={me.role === "admin"} locale={intlLocale} t={a} />
       </main>
     </>

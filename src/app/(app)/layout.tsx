@@ -15,6 +15,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     supabase.from("project_members").select("project_id, permissions").eq("user_id", userId),
     getPlan(),
   ]);
+  const pendingRequests =
+    plan.role === "user" ? 0 : ((await supabase.from("upgrade_requests").select("id", { count: "exact", head: true }).eq("status", "pending")).count ?? 0);
   if (plan.suspended) {
     return (
       <main className="flex min-h-dvh items-center justify-center p-6">
@@ -38,7 +40,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <NavProvider projects={navProjects} t={t}>
       <div className="flex min-h-dvh">
-        <Rail labels={t.nav} isStaff={plan.role !== "user"} />
+        <Rail labels={t.nav} isStaff={plan.role !== "user"} pendingRequests={pendingRequests} />
         <div className="flex min-w-0 flex-1 flex-col max-md:pb-16">{children}</div>
       </div>
       <CommandPalette />

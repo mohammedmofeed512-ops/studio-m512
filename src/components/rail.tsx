@@ -15,7 +15,7 @@ const ITEMS = [
 ] as const;
 
 /** The narrow dark icon rail on the start edge of every signed-in page. */
-export function Rail({ labels, isStaff = false }: { labels: Labels; isStaff?: boolean }) {
+export function Rail({ labels, isStaff = false, pendingRequests = 0 }: { labels: Labels; isStaff?: boolean; pendingRequests?: number }) {
   const pathname = usePathname();
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`));
 
@@ -38,7 +38,12 @@ export function Rail({ labels, isStaff = false }: { labels: Labels; isStaff?: bo
               active ? "text-white" : "text-rail-muted hover:bg-rail-hover hover:text-white"
             }`}
           >
-            <Icon />
+            <span className="relative">
+              <Icon />
+              {key === "admin" && pendingRequests > 0 ? (
+                <span className="absolute -end-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] text-white">{pendingRequests}</span>
+              ) : null}
+            </span>
             {labels[key]}
           </Link>
         );
