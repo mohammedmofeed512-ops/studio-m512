@@ -4,12 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import Text from "@tiptap/extension-text";
 import { Placeholder, UndoRedo } from "@tiptap/extensions";
-import { saveScriptContent } from "@/lib/script-actions";
+import { saveScriptContent, type SaveResult } from "@/lib/script-actions";
 import { ELEMENT_KINDS, extractScenes, formatEighths, type ElementKind, type ScriptLine } from "@/lib/screenplay/model";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { ElementNode, ScreenplayDocument, ScreenplayKeys, goToScene, setKind } from "./element-node";
+import { ConflictBar, PresenceBadges, usePresence } from "./collab";
 
-type Labels = { scripts: Dictionary["scripts"]; elements: Dictionary["elements"]; placeholders: Dictionary["placeholders"] };
+type Labels = { scripts: Dictionary["scripts"]; elements: Dictionary["elements"]; placeholders: Dictionary["placeholders"]; presence: Dictionary["presence"] };
 type SaveState = "saved" | "dirty" | "saving" | "error";
 
 const AUTOSAVE_MS = 1200;
@@ -20,17 +21,25 @@ export function ScreenplayEditor({
   language,
   labels,
   readOnly = false,
+  baseStamp = null,
+  viewerName = "",
 }: {
   scriptId: string;
   initialContent: unknown;
   language: "ar" | "en";
   labels: Labels;
   readOnly?: boolean;
+  baseStamp?: string | null;
+  viewerName?: string;
 }) {
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [saveError, setSaveError] = useState("");
+  const [conflict, setConflict] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef<unknown>(null);
+  // The save stamp this editor last saw; null means "save even if someone else saved".
+  const base = useRef<string | null | undefined>(baseStamp ?? undefined);
+  const others = usePresence(scriptId, viewerName, !readOnly && Boolean(viewerName));
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -71,7 +80,16 @@ export function ScreenplayEditor({
     setSaveState("saving");
     // Sent as a JSON string: ProseMirror builds attrs with Object.create(null), which React
     // cannot pass to a Server Action as plain data (the server would get an opaque reference).
-    const result = await saveScriptContent(scriptId, JSON.stringify(content)).catch((e: unknown) => ({ ok: false as const, error: e instanceof Error ? e.message : String(e) }));
+    const result: SaveResult = await saveScriptContent(scriptId, JSON.stringify(content), base.current).catch((e: unknown) => ({ ok: false as const, error: e instanceof Error ? e.message : String(e) }));
+    if (result.ok) base.current = result.savedAt;
+    if (!result.ok && result.conflict) {
+      // Keep the edits and wait for the writer to choose; no automatic retry.
+      pending.current = pending.current ?? content;
+      setConflict(result.conflict.by);
+      setSaveState("error");
+      setSaveError("");
+      return;
+    }
     if (pending.current) return; // newer edits arrived; their timer will save them
     setSaveState(result.ok ? "saved" : "error");
     setSaveError(result.ok ? (result.warning ?? "") : result.error);
@@ -130,6 +148,21 @@ export function ScreenplayEditor({
   return (
     <div className="flex min-h-0 flex-1 flex-wrap">
       <div className="min-w-0 flex-[999_1_480px]">
+        {conflict !== null ? (
+          <ConflictBar
+            by={conflict}
+            t={labels.presence}
+            onReload={() => {
+              pending.current = null;
+              window.location.reload();
+            }}
+            onOverwrite={() => {
+              setConflict(null);
+              base.current = null;
+              void flush();
+            }}
+          />
+        ) : null}
         {!readOnly ? (
           <div className="no-print sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-line bg-white/95 px-6 py-2 backdrop-blur">
             <label className="flex items-center gap-2 text-[12px] font-semibold text-muted">
@@ -164,6 +197,7 @@ export function ScreenplayEditor({
                 </button>
               ))}
             </div>
+            <PresenceBadges names={others} label={labels.presence.editingNow} />
             <span role="status" aria-live="polite" className={`ms-auto max-w-[50%] truncate text-[12px] font-semibold ${saveState === "error" ? "text-warn" : "text-muted"}`} title={saveError || undefined}>
               {status}
               {saveError ? <span className="font-normal"> · {saveError}</span> : null}

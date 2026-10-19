@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { PROJECT_TOOLS, projectFromPath, toolHref, type ProjectToolKey } from "@/lib/project-tools";
-import { useNav } from "./nav/nav-context";
+import { canOpenTool, useNav } from "./nav/nav-context";
 
 /**
  * The project's tools as numbered workflow steps (Alt+1…5 jumps straight to a step),
@@ -20,25 +20,26 @@ export function ProjectSidebar({ projectId }: { projectId: string }) {
   const script = search.get("script");
   const p = t.projects;
   const label = (key: ProjectToolKey) => (key === "lookbook" ? p.lookbook : p[key]);
+  const current = projects.find((x) => x.id === projectId);
+  const allowed = (key: ProjectToolKey) => canOpenTool(current, key);
   const href = (key: ProjectToolKey, id = projectId) => toolHref(id, key, id === projectId ? script : null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!e.altKey || e.ctrlKey || e.metaKey) return;
       const n = Number(e.code.replace("Digit", ""));
-      const tool = PROJECT_TOOLS.find((x) => x.step === n);
-      if (!e.code.startsWith("Digit") || !tool) return;
+      const tool = PROJECT_TOOLS.find((x) => x.step === n && x.step <= 5);
+      if (!e.code.startsWith("Digit") || !tool || !canOpenTool(current, tool.key)) return;
       e.preventDefault();
       router.push(toolHref(projectId, tool.key, script));
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [projectId, router, script]);
+  }, [projectId, router, script, current]);
 
-  const current = projects.find((x) => x.id === projectId);
-  const steps = PROJECT_TOOLS.filter((x) => x.step >= 1 && x.step <= 5);
+  const steps = PROJECT_TOOLS.filter((x) => x.step >= 1 && x.step <= 5 && allowed(x.key));
   const activeStep = PROJECT_TOOLS.find((x) => x.key === active)?.step ?? 0;
-  const next = steps.find((x) => x.step === activeStep + 1);
+  const next = steps.find((x) => x.step > activeStep);
 
   const item = (key: ProjectToolKey, step?: number) => (
     <Link
@@ -79,6 +80,7 @@ export function ProjectSidebar({ projectId }: { projectId: string }) {
                 className="block truncate rounded-md px-2.5 py-2 font-semibold hover:bg-ground aria-[current=true]:text-accent-ink"
               >
                 {x.name}
+                {x.shared ? <span className="ms-2 text-[10px] font-bold text-faint">{t.team.shared}</span> : null}
               </Link>
             ))}
           </div>
@@ -86,11 +88,12 @@ export function ProjectSidebar({ projectId }: { projectId: string }) {
       ) : null}
 
       {item("overview", 0)}
+      {item("team")}
       <div className="mx-3 mb-1.5 mt-3.5 text-[11px] font-bold text-faint max-md:hidden">{t.flow.steps}</div>
       {steps.map((x) => item(x.key, x.step))}
 
       <div className="mx-3 mb-1.5 mt-3.5 text-[11px] font-bold text-faint max-md:hidden">{p.resources}</div>
-      {item("lookbook")}
+      {allowed("lookbook") ? item("lookbook") : null}
       <Link href="/contacts" className="pill-nav shrink-0 max-md:h-9 max-md:bg-ground max-md:px-3.5">
         {t.nav.contacts}
       </Link>

@@ -10,6 +10,10 @@ import { IconProjects, IconTasks } from "@/components/icons";
 import { createTask, deleteProject } from "@/lib/actions";
 import { getI18n } from "@/lib/i18n/server";
 import { getViewer } from "@/lib/viewer";
+import { getAccess } from "@/lib/access";
+import { canEdit, canView } from "@/lib/permissions";
+import { EditGate } from "@/components/access";
+import { ActivityFeed } from "@/components/activity-feed";
 
 export async function generateMetadata({ params }: PageProps<"/projects/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -23,11 +27,12 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const [{ t, formatDate }, { supabase }] = await Promise.all([getI18n(), getViewer()]);
 
-  const [{ data: project }, { data: tasks }] = await Promise.all([
+  const [{ data: project }, { data: tasks }, access] = await Promise.all([
     supabase.from("projects").select("*").eq("id", id).maybeSingle(),
     supabase.from("tasks").select("id, title, status, due_date").eq("project_id", id).order("status").order("position", { ascending: false }),
+    getAccess(id),
   ]);
-  if (!project) notFound();
+  if (!project || !access) notFound();
 
   return (
     <>
@@ -55,17 +60,23 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
               </h2>
             </div>
             <div className="p-6">
-              <ProjectForm t={t} project={project} />
+              <EditGate editable={access.isOwner}>
+                <ProjectForm t={t} project={project} />
+              </EditGate>
             </div>
-            <form action={deleteProject} className="border-t border-line px-6 py-3">
-              <input type="hidden" name="id" value={project.id} />
-              <ConfirmButton className="btn-danger h-8 px-2" message={t.projects.deleteConfirm}>
-                {t.common.delete}
-              </ConfirmButton>
-            </form>
+            {access.isOwner ? (
+              <form action={deleteProject} className="border-t border-line px-6 py-3">
+                <input type="hidden" name="id" value={project.id} />
+                <ConfirmButton className="btn-danger h-8 px-2" message={t.projects.deleteConfirm}>
+                  {t.common.delete}
+                </ConfirmButton>
+              </form>
+            ) : null}
           </section>
 
-          <section aria-labelledby="ptasks-h" className="card self-start overflow-hidden">
+          <ActivityFeed projectId={project.id} />
+
+          {canView(access, "tasks") ? <section aria-labelledby="ptasks-h" className="card self-start overflow-hidden">
             <div className="card-head">
               <div className="flex items-center gap-3">
                 <span className="icon-dot">
@@ -76,14 +87,15 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
                 </h2>
               </div>
             </div>
-            <form action={createTask} className="flex gap-2 border-b border-line px-6 py-3">
+            {canEdit(access, "tasks") ? <form action={createTask} className="flex gap-2 border-b border-line px-6 py-3">
               <input type="hidden" name="project_id" value={project.id} />
               <label htmlFor="ptask" className="sr-only">
                 {t.tasks.new}
               </label>
               <input id="ptask" name="title" required maxLength={300} placeholder={t.tasks.placeholder} className="field h-9" />
               <button className="btn-soft">{t.common.add}</button>
-            </form>
+            </form> : null}
+            <EditGate editable={canEdit(access, "tasks")}>
             <div className="px-6 py-1.5">
               {tasks?.length ? (
                 tasks.map((task) => <TaskRow key={task.id} task={task} t={t} dueLabel={formatDate(task.due_date)} showDelete />)
@@ -91,7 +103,8 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
                 <p className="py-8 text-center text-muted">{t.tasks.empty}</p>
               )}
             </div>
-          </section>
+            </EditGate>
+          </section> : null}
         </main>
       </div>
     </>

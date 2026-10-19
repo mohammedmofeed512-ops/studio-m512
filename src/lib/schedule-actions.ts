@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient, requireUser } from "@/lib/supabase/server";
 import { planDays, type StripScene } from "@/lib/production/schedule";
+import { logActivity } from "@/lib/activity";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isId = (v: unknown): v is string => typeof v === "string" && UUID.test(v);
@@ -25,8 +26,9 @@ async function nextDayNumber(supabase: Awaited<ReturnType<typeof requireUser>>["
 }
 
 export async function addShootDay(projectId: string) {
-  const { supabase } = await requireUser();
+  const { supabase, userId } = await requireUser();
   if (!isId(projectId)) return { ok: false as const };
+  await logActivity(supabase, { projectId, userId, action: "day_added" });
   const { data, error } = await supabase
     .from("shoot_days")
     .insert({ project_id: projectId, day_number: await nextDayNumber(supabase, projectId) })
@@ -63,7 +65,7 @@ export async function deleteShootDay(projectId: string, dayId: string) {
 
 /** Saves the order of scenes in every day, in one transaction. */
 export async function saveStripboard(projectId: string, layout: string) {
-  const { supabase } = await requireUser();
+  const { supabase, userId } = await requireUser();
   if (!isId(projectId) || typeof layout !== "string" || layout.length > 500_000) return { ok: false as const, error: "invalid" };
   let parsed: unknown;
   try {
@@ -81,6 +83,7 @@ export async function saveStripboard(projectId: string, layout: string) {
     return { ok: false as const, error: error.message };
   }
   revalidatePath(`/projects/${projectId}/call-sheets`, "layout");
+  await logActivity(supabase, { projectId, userId, action: "schedule_changed", throttleMinutes: 20 });
   return { ok: true as const };
 }
 
@@ -151,12 +154,22 @@ export async function addRecipients(input: { projectId: string; callSheetId: str
 }
 
 export async function updateRecipient(input: { projectId: string; id: string; call_time?: string; sent?: boolean }) {
-  const { supabase } = await requireUser();
+  const { supabase, userId } = await requireUser();
   if (!isId(input.projectId) || !isId(input.id)) return;
   if ("call_time" in input) await supabase.from("call_sheet_recipients").update({ call_time: time(input.call_time) }).eq("id", input.id);
   if (input.sent) {
-    const { data: r } = await supabase.from("call_sheet_recipients").update({ status: "sent" }).eq("id", input.id).eq("status", "pending").select("call_sheet_id").maybeSingle();
-    if (r) await supabase.from("call_sheets").update({ sent_at: new Date().toISOString() }).eq("id", r.call_sheet_id).is("sent_at", null);
+    const { data: r } = await supabase
+      .from("call_sheet_recipients")
+      .update({ status: "sent" })
+      .eq("id", input.id)
+      .eq("status", "pending")
+      .select("call_sheet_id, contact:contacts(full_name)")
+      .maybeSingle();
+    if (r) {
+      await supabase.from("call_sheets").update({ sent_at: new Date().toISOString() }).eq("id", r.call_sheet_id).is("sent_at", null);
+      const contact = Array.isArray(r.contact) ? r.contact[0] : r.contact;
+      await logActivity(supabase, { projectId: input.projectId, userId, action: "call_sheet_sent", summary: contact?.full_name ?? "" });
+    }
   }
   revalidate(input.projectId);
 }

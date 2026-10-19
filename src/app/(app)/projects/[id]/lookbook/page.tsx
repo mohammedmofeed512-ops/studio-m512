@@ -9,6 +9,9 @@ import { isUuid } from "@/lib/production/load";
 import { signMedia } from "@/lib/supabase/media";
 import { getI18n } from "@/lib/i18n/server";
 import { getViewer } from "@/lib/viewer";
+import { getAccess } from "@/lib/access";
+import { canEdit, canView } from "@/lib/permissions";
+import { EditGate, NoAccessPage, ReadOnlyBanner } from "@/components/access";
 
 export const metadata: Metadata = { title: "Lookbook" };
 
@@ -20,7 +23,10 @@ export default async function LookbookPage({ params }: PageProps<"/projects/[id]
     supabase.from("projects").select("id, name").eq("id", id).maybeSingle(),
     supabase.from("lookbook_items").select("id, category, note, image_path, position").eq("project_id", id).order("position", { ascending: false }),
   ]);
-  if (!project) notFound();
+  const access = await getAccess(id);
+  if (!project || !access) notFound();
+  if (!canView(access, "lookbook")) return <NoAccessPage projectId={id} projectName={project.name} title={t.lookbook.title} t={t} />;
+  const editable = canEdit(access, "lookbook");
   const urls = await signMedia(supabase, (items ?? []).map((i) => i.image_path));
 
   return (
@@ -37,15 +43,18 @@ export default async function LookbookPage({ params }: PageProps<"/projects/[id]
         }
       />
       <SubToolbar icon={<IconProjects size={14} />} title={t.lookbook.title} meta={`${items?.length ?? 0} ${t.lookbook.images}`} />
+      {!editable ? <ReadOnlyBanner t={t} /> : null}
       <div className="flex flex-1 max-md:flex-col">
         <ProjectSidebar projectId={id} />
         <main className="min-w-0 flex-1 p-6 max-sm:p-4">
+          <EditGate editable={editable}>
           <LookbookBoard
             projectId={id}
             userId={userId}
             items={(items ?? []).map((i) => ({ id: i.id, category: i.category, note: i.note, url: urls.get(i.image_path) ?? null }))}
             t={{ lookbook: t.lookbook, shots: t.shots, common: t.common }}
           />
+          </EditGate>
         </main>
       </div>
     </>

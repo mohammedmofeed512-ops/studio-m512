@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/supabase/server";
+import { logActivity } from "@/lib/activity";
 import { ELEMENT_CATEGORIES, type ElementCategory } from "@/lib/database.types";
 import { docToLines } from "@/lib/screenplay/model";
 import { nextShotNumber, sceneLines, speakingCharacters } from "@/lib/production/breakdown";
@@ -91,8 +92,9 @@ function shotFields(input: Record<string, unknown>): ShotFields {
 }
 
 export async function addShot(input: { projectId: string; sceneId: string }) {
-  const { supabase } = await requireUser();
+  const { supabase, userId } = await requireUser();
   if (!isId(input.projectId) || !isId(input.sceneId)) return null;
+  await logActivity(supabase, { projectId: input.projectId, userId, action: "shots_changed", targetId: input.sceneId, throttleMinutes: 20 });
   const [{ data: scene }, { data: existing }] = await Promise.all([
     supabase.from("scenes").select("scene_number").eq("id", input.sceneId).maybeSingle(),
     supabase.from("shots").select("shot_number, position").eq("scene_id", input.sceneId).order("position", { ascending: false }),

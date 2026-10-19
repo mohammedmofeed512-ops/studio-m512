@@ -79,9 +79,18 @@ export type Database = {
         ];
       };
       script_versions: {
-        Row: { content: Json; created_at: string; id: string; owner_id: string; revision_color: string; script_id: string; version_number: number };
-        Insert: { content?: Json; created_at?: string; id?: string; owner_id?: string; revision_color?: string; script_id: string; version_number: number };
-        Update: { content?: Json; created_at?: string; id?: string; owner_id?: string; revision_color?: string; script_id?: string; version_number?: number };
+        Row: {
+          content: Json; content_updated_at: string; content_updated_by: string | null; created_at: string; id: string; owner_id: string | null;
+          revision_color: string; script_id: string; version_number: number;
+        };
+        Insert: {
+          content?: Json; content_updated_at?: string; content_updated_by?: string | null; created_at?: string; id?: string; owner_id?: string | null;
+          revision_color?: string; script_id: string; version_number: number;
+        };
+        Update: {
+          content?: Json; content_updated_at?: string; content_updated_by?: string | null; created_at?: string; id?: string; owner_id?: string | null;
+          revision_color?: string; script_id?: string; version_number?: number;
+        };
         Relationships: [
           { foreignKeyName: "script_versions_script_id_fkey"; columns: ["script_id"]; isOneToOne: false; referencedRelation: "scripts"; referencedColumns: ["id"] },
         ];
@@ -217,6 +226,47 @@ export type Database = {
           { foreignKeyName: "call_sheet_recipients_contact_id_fkey"; columns: ["contact_id"]; isOneToOne: false; referencedRelation: "contacts"; referencedColumns: ["id"] },
         ];
       };
+      project_members: {
+        Row: { created_at: string; invited_by: string | null; permissions: Json; project_id: string; role: string; updated_at: string; user_id: string };
+        Insert: { created_at?: string; invited_by?: string | null; permissions?: Json; project_id: string; role?: string; updated_at?: string; user_id: string };
+        Update: { created_at?: string; invited_by?: string | null; permissions?: Json; project_id?: string; role?: string; updated_at?: string; user_id?: string };
+        Relationships: [
+          { foreignKeyName: "project_members_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "projects"; referencedColumns: ["id"] },
+        ];
+      };
+      project_invitations: {
+        Row: {
+          accepted_at: string | null; accepted_by: string | null; created_at: string; email: string; expires_at: string; id: string;
+          invited_by: string | null; permissions: Json; project_id: string; role: string; token: string;
+        };
+        Insert: {
+          accepted_at?: string | null; accepted_by?: string | null; created_at?: string; email: string; expires_at?: string; id?: string;
+          invited_by?: string | null; permissions?: Json; project_id: string; role?: string; token?: string;
+        };
+        Update: {
+          accepted_at?: string | null; accepted_by?: string | null; created_at?: string; email?: string; expires_at?: string; id?: string;
+          invited_by?: string | null; permissions?: Json; project_id?: string; role?: string; token?: string;
+        };
+        Relationships: [
+          { foreignKeyName: "project_invitations_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "projects"; referencedColumns: ["id"] },
+        ];
+      };
+      activity_log: {
+        Row: { action: string; created_at: string; id: string; project_id: string; summary: string | null; target_id: string | null; user_id: string | null };
+        Insert: { action: string; created_at?: string; id?: string; project_id: string; summary?: string | null; target_id?: string | null; user_id?: string | null };
+        Update: { action?: string; created_at?: string; id?: string; project_id?: string; summary?: string | null; target_id?: string | null; user_id?: string | null };
+        Relationships: [
+          { foreignKeyName: "activity_log_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "projects"; referencedColumns: ["id"] },
+        ];
+      };
+      script_presence: {
+        Row: { name: string; script_id: string; seen_at: string; user_id: string };
+        Insert: { name: string; script_id: string; seen_at?: string; user_id?: string };
+        Update: { name?: string; script_id?: string; seen_at?: string; user_id?: string };
+        Relationships: [
+          { foreignKeyName: "script_presence_script_id_fkey"; columns: ["script_id"]; isOneToOne: false; referencedRelation: "scripts"; referencedColumns: ["id"] },
+        ];
+      };
       tasks: {
         Row: {
           assignee_contact_id: string | null; created_at: string; due_date: string | null; id: string; owner_id: string;
@@ -243,6 +293,8 @@ export type Database = {
       call_sheet_view: { Args: { p_token: string }; Returns: Json };
       call_sheet_opened: { Args: { p_token: string }; Returns: undefined };
       call_sheet_confirm: { Args: { p_token: string }; Returns: boolean };
+      invitation_preview: { Args: { p_token: string }; Returns: Json };
+      accept_invitation: { Args: { p_token: string }; Returns: Json };
     };
     Enums: Enums;
     CompositeTypes: { [_ in never]: never };

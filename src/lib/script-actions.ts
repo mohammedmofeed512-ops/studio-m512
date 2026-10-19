@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/supabase/server";
 import type { Json } from "@/lib/database.types";
 import { docToLines, extractScenes, linesToDoc, REVISION_COLORS, type ElementKind, ELEMENT_KINDS, type ScriptLine } from "@/lib/screenplay/model";
 import { emptyAvDoc, sanitizeAvDoc } from "@/lib/screenplay/av";
+import { logActivity } from "@/lib/activity";
 
 type Supabase = Awaited<ReturnType<typeof requireUser>>["supabase"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -53,7 +54,7 @@ async function syncScenes(supabase: Supabase, scriptId: string, lines: ScriptLin
 
 // ───────────── create ─────────────
 export async function createScript(fd: FormData) {
-  const { supabase } = await requireUser();
+  const { supabase, userId } = await requireUser();
   const projectId = str(fd, "project_id", 64);
   if (!projectId || !UUID.test(projectId)) return;
   const kind = str(fd, "kind") === "av" ? "av" : "screenplay";
@@ -85,21 +86,37 @@ export async function createScript(fd: FormData) {
   }
   await supabase.from("scripts").update({ current_version_id: version.id }).eq("id", script.id);
   if (kind === "screenplay") await syncScenes(supabase, script.id, lines).catch((e) => console.error("createScript: scenes", e));
+  await logActivity(supabase, { projectId, userId, action: "script_created", summary: title, targetId: script.id });
 
   revalidatePath(`/projects/${projectId}`, "layout");
   redirect(`/projects/${projectId}/scripts/${script.id}`);
 }
 
 // ───────────── autosave ─────────────
-export type SaveResult = { ok: true; savedAt: string; warning?: string } | { ok: false; error: string };
+export type SaveResult =
+  | { ok: true; savedAt: string; warning?: string }
+  | { ok: false; error: string; conflict?: { by: string } };
 
-export async function saveScriptContent(scriptId: string, content: unknown): Promise<SaveResult> {
+/**
+ * Saves the current version's text. `base` is the save stamp the editor last saw; when someone
+ * else saved after it, nothing is written and the editor is told who, so no one's work is lost
+ * silently. Pass `base = null` to save anyway.
+ */
+export async function saveScriptContent(scriptId: string, content: unknown, base?: string | null): Promise<SaveResult> {
   try {
     if (!UUID.test(scriptId)) return { ok: false, error: "bad script id" };
-    const { supabase } = await requireUser();
-    const { data: script, error: readError } = await supabase.from("scripts").select("id, kind, current_version_id").eq("id", scriptId).maybeSingle();
+    const { supabase, userId } = await requireUser();
+    const { data: script, error: readError } = await supabase.from("scripts").select("id, kind, title, project_id, current_version_id").eq("id", scriptId).maybeSingle();
     if (readError) return { ok: false, error: `read: ${readError.message}` };
     if (!script?.current_version_id) return { ok: false, error: "script has no current version" };
+
+    if (typeof base === "string") {
+      const { data: v } = await supabase.from("script_versions").select("content_updated_at, content_updated_by").eq("id", script.current_version_id).maybeSingle();
+      if (v && v.content_updated_by && v.content_updated_by !== userId && Date.parse(v.content_updated_at) !== Date.parse(base)) {
+        const { data: who } = await supabase.from("profiles").select("full_name").eq("id", v.content_updated_by).maybeSingle();
+        return { ok: false, error: "conflict", conflict: { by: who?.full_name ?? "" } };
+      }
+    }
 
     if (typeof content === "string") {
       if (content.length > 4_000_000) return { ok: false, error: "script too large" };
@@ -114,8 +131,14 @@ export async function saveScriptContent(scriptId: string, content: unknown): Pro
       clean = linesToDoc(lines) as unknown as Json;
     }
     // Save the text first so a scene-sync problem can never lose writing.
-    const { error } = await supabase.from("script_versions").update({ content: clean }).eq("id", script.current_version_id);
+    const savedAt = new Date().toISOString();
+    const { data: written, error } = await supabase
+      .from("script_versions")
+      .update({ content: clean, content_updated_at: savedAt, content_updated_by: userId })
+      .eq("id", script.current_version_id)
+      .select("id");
     if (error) return { ok: false, error: `write: ${error.message}` };
+    if (Array.isArray(written) && !written.length) return { ok: false, error: "no permission to edit this script" };
     await supabase.from("scripts").update({ updated_at: new Date().toISOString() }).eq("id", script.id);
     let warning: string | undefined;
     if (script.kind === "screenplay") {
@@ -128,7 +151,10 @@ export async function saveScriptContent(scriptId: string, content: unknown): Pro
         },
       );
     }
-    return { ok: true, savedAt: new Date().toISOString(), warning };
+    if (script.project_id) {
+      await logActivity(supabase, { projectId: script.project_id, userId, action: "script_edited", summary: script.title, targetId: script.id, throttleMinutes: 20 });
+    }
+    return { ok: true, savedAt, warning };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error("saveScriptContent failed", scriptId, message);

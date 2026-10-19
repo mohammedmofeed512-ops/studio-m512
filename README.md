@@ -31,8 +31,8 @@ In Supabase → Authentication → URL Configuration, set **Site URL** to where 
 ## Database
 
 Migrations live in `supabase/migrations/`. Every table carries `owner_id` and an RLS policy that
-limits each signed-in user to their own rows. Client and crew access through share links will be
-added later through security-definer functions.
+gives each project member the access level (none, view, edit) set for each tool. Helpers live in
+the `authz` schema; crew call sheet links use token-checked security-definer functions.
 
 ## Roadmap
 
@@ -42,5 +42,7 @@ added later through security-definer functions.
 | 2 | Arabic screenplay editor, AV scripts, import, PDF export, revisions | ✅ |
 | 3 | Breakdown, shot lists, storyboards, lookbooks | ✅ |
 | 4 | Stripboard, shoot days, call sheets, sending and tracking; quick-jump (Ctrl+K) and Alt+number navigation | ✅ |
-| 5 | Client share links, comments and approvals, mobile polish | next |
+| 5 | Teams: invitations, per-tool permissions, presence, activity | ✅ (pending deploy) |
+| 6 | Claude inside the platform (each member's own API key) | next |
+| 7 | Client share links, comments and approvals, mobile polish | |
 | later | Budget and crew rates | |

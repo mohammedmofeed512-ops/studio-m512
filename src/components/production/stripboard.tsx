@@ -29,6 +29,8 @@ export function Stripboard({
   cast,
   locations,
   locale,
+  readOnly = false,
+  showCallSheets = true,
   t,
 }: {
   projectId: string;
@@ -39,6 +41,8 @@ export function Stripboard({
   cast: Record<string, number[]>;
   locations: Array<{ id: string; full_name: string }>;
   locale: string;
+  readOnly?: boolean;
+  showCallSheets?: boolean;
   t: Labels;
 }) {
   const s = t.schedule;
@@ -139,7 +143,7 @@ export function Stripboard({
     return (
       <li
         key={id}
-        draggable
+        draggable={!readOnly}
         onDragStart={(e) => {
           e.dataTransfer.effectAllowed = "move";
           e.dataTransfer.setData("text/plain", id);
@@ -173,7 +177,7 @@ export function Stripboard({
         <span className="truncate text-[11px] font-semibold text-body max-sm:hidden" dir="ltr" title={s.cast}>
           {(cast[id] ?? []).join(", ")}
         </span>
-        <span className="flex items-center gap-0.5">
+        <span className={`flex items-center gap-0.5 ${readOnly ? "invisible" : ""}`}>
           <button type="button" aria-label={s.up} disabled={index === 0} onClick={() => move(id, day, index - 1)} className="size-7 rounded text-muted hover:bg-black/5 disabled:opacity-30">
             ▲
           </button>
@@ -206,10 +210,10 @@ export function Stripboard({
       {/* Shoot days */}
       <section aria-label={s.stripboard} className="min-w-0">
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <button type="button" className="btn-primary" disabled={pending} onClick={() => run(() => addShootDay(projectId))}>
+          {!readOnly ? <button type="button" className="btn-primary" disabled={pending} onClick={() => run(() => addShootDay(projectId))}>
             + {s.addDay}
-          </button>
-          {scriptId && bank.length ? (
+          </button> : null}
+          {!readOnly && scriptId && bank.length ? (
             <details className="relative">
               <summary className="btn-soft cursor-pointer list-none [&::-webkit-details-marker]:hidden">{s.auto}</summary>
               <div className="absolute start-0 top-11 z-30 w-[290px] rounded-[10px] border border-line bg-white p-4 shadow-lg">
@@ -252,20 +256,20 @@ export function Stripboard({
                       .join(" · ")}
                   </span>
                   <span className="ms-auto flex items-center gap-1">
-                    <button type="button" className="btn-ghost h-8 px-2.5" aria-expanded={editing === day.id} onClick={() => setEditing(editing === day.id ? null : day.id)}>
+                    {!readOnly ? <button type="button" className="btn-ghost h-8 px-2.5" aria-expanded={editing === day.id} onClick={() => setEditing(editing === day.id ? null : day.id)}>
                       {editing === day.id ? s.done : s.edit}
-                    </button>
-                    <Link href={`/projects/${projectId}/call-sheets/${day.id}`} className="btn-soft h-8 px-2.5">
+                    </button> : null}
+                    {showCallSheets ? <Link href={`/projects/${projectId}/call-sheets/${day.id}`} className="btn-soft h-8 px-2.5">
                       {s.callSheet}
-                    </Link>
-                    <button
+                    </Link> : null}
+                    {!readOnly ? <button
                       type="button"
                       className="btn-danger h-8 px-2.5"
                       disabled={pending}
                       onClick={() => window.confirm(s.deleteDayConfirm) && run(() => deleteShootDay(projectId, day.id))}
                     >
                       {s.deleteDay}
-                    </button>
+                    </button> : null}
                   </span>
                 </header>
                 {editing === day.id ? (

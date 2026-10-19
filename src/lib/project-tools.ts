@@ -7,6 +7,7 @@ export const PROJECT_TOOLS = [
   { key: "schedule", path: "/schedule", step: 4 },
   { key: "callSheets", path: "/call-sheets", step: 5 },
   { key: "lookbook", path: "/lookbook", step: 6 },
+  { key: "team", path: "/team", step: 7 },
 ] as const;
 
 export type ProjectToolKey = (typeof PROJECT_TOOLS)[number]["key"];

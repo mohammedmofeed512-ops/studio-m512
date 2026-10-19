@@ -17,5 +17,7 @@ export async function GET(request: NextRequest) {
     ok = !(await supabase.auth.verifyOtp({ token_hash: tokenHash, type })).error;
   }
 
-  return NextResponse.redirect(`${origin}${ok ? "/" : "/login"}`);
+  const next = searchParams.get("next");
+  const safe = next && /^\/(?!\/)[\w\-./?=&%]*$/.test(next) ? next : "/";
+  return NextResponse.redirect(`${origin}${ok ? safe : "/login"}`);
 }

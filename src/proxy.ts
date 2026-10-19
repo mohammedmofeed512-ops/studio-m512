@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/auth", "/c"];
+const PUBLIC_PATHS = ["/login", "/auth", "/c", "/invite"];
 
 /**
  * Runs before every page: refreshes the Supabase session cookie and sends
@@ -40,7 +40,8 @@ export async function proxy(request: NextRequest) {
   }
   if (signedIn && path === "/login") {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    const next = request.nextUrl.searchParams.get("next");
+    url.pathname = next && /^\/(?!\/)[\w\-./]*$/.test(next) ? next : "/";
     url.search = "";
     return NextResponse.redirect(url);
   }

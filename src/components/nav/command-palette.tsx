@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PROJECT_TOOLS, matchesSearch, projectFromPath, toolHref } from "@/lib/project-tools";
-import { useNav } from "./nav-context";
+import { canOpenTool, useNav } from "./nav-context";
 
 type Item = { id: string; label: string; detail?: string; href: string; group: string; minor?: boolean };
 
@@ -45,12 +45,12 @@ export function CommandPalette() {
 
   const items = useMemo(() => {
     const p = t.projects;
-    const toolLabel = (key: (typeof PROJECT_TOOLS)[number]["key"]) => (key === "lookbook" ? p.lookbook : p[key]);
+    const toolLabel = (key: (typeof PROJECT_TOOLS)[number]["key"]) => (key === "lookbook" ? p.lookbook : key === "team" ? p.team : p[key]);
     const here = projectFromPath(pathname)?.projectId;
     const out: Item[] = [];
     const current = projects.find((x) => x.id === here);
     if (current) {
-      for (const tool of PROJECT_TOOLS)
+      for (const tool of PROJECT_TOOLS.filter((x) => canOpenTool(current, x.key)))
         out.push({ id: `h-${tool.key}`, label: toolLabel(tool.key), detail: current.name, href: toolHref(current.id, tool.key), group: t.palette.thisProject });
     }
     const pages: Array<[string, string]> = [
@@ -65,7 +65,7 @@ export function CommandPalette() {
     for (const proj of projects) {
       if (proj.id === here) continue;
       out.push({ id: `o-${proj.id}`, label: proj.name, href: `/projects/${proj.id}`, group: t.palette.otherProjects });
-      for (const tool of PROJECT_TOOLS.slice(1))
+      for (const tool of PROJECT_TOOLS.slice(1).filter((x) => canOpenTool(proj, x.key)))
         out.push({ id: `o-${proj.id}-${tool.key}`, label: `${proj.name} · ${toolLabel(tool.key)}`, href: toolHref(proj.id, tool.key), group: t.palette.otherProjects, minor: true });
     }
     return out;

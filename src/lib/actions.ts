@@ -30,6 +30,11 @@ const isoDate = (value: string | null) => (value && /^\d{4}-\d{2}-\d{2}$/.test(v
 
 export type FormState = { error?: string; message?: string } | undefined;
 
+/** Only same-site paths are allowed as a place to return to after signing in. */
+function safeNext(value: FormDataEntryValue | string | null | undefined) {
+  return typeof value === "string" && /^\/(?!\/)[\w\-./?=&%]*$/.test(value) ? value : "/";
+}
+
 // ───────────── auth ─────────────
 export async function signIn(_prev: FormState, fd: FormData): Promise<FormState> {
   const email = str(fd, "email", 320);
@@ -39,7 +44,7 @@ export async function signIn(_prev: FormState, fd: FormData): Promise<FormState>
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: "invalid" };
-  redirect("/");
+  redirect(safeNext(fd.get("next")));
 }
 
 export async function signUp(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -54,10 +59,10 @@ export async function signUp(_prev: FormState, fd: FormData): Promise<FormState>
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName }, emailRedirectTo: `${origin}/auth/callback` },
+    options: { data: { full_name: fullName }, emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(safeNext(fd.get("next")))}` },
   });
   if (error) return { error: "failed" };
-  if (data.session) redirect("/");
+  if (data.session) redirect(safeNext(fd.get("next")));
   return { message: "checkEmail" };
 }
 

@@ -8,6 +8,9 @@ import { NewScript } from "@/components/screenplay/new-script";
 import { REVISION_SWATCH, formatEighths, type RevisionColor } from "@/lib/screenplay/model";
 import { getI18n } from "@/lib/i18n/server";
 import { getViewer } from "@/lib/viewer";
+import { getAccess } from "@/lib/access";
+import { canEdit, canView } from "@/lib/permissions";
+import { NoAccess, ReadOnlyBanner } from "@/components/access";
 
 export const metadata: Metadata = { title: "Scripts" };
 
@@ -24,8 +27,10 @@ export default async function ScriptsPage({ params }: PageProps<"/projects/[id]/
       .eq("project_id", id)
       .order("updated_at", { ascending: false }),
   ]);
-  if (!project) notFound();
+  const access = await getAccess(id);
+  if (!project || !access) notFound();
   const s = t.scripts;
+  const editable = canEdit(access, "script");
 
   return (
     <>
@@ -45,10 +50,11 @@ export default async function ScriptsPage({ params }: PageProps<"/projects/[id]/
         }
       />
       <SubToolbar icon={<IconScript size={14} />} title={s.title} meta={`${scripts?.length ?? 0}`} />
+      {canView(access, "script") && !editable ? <ReadOnlyBanner t={t} /> : null}
 
       <div className="flex flex-1 max-md:flex-col">
         <ProjectSidebar projectId={id} />
-        <main className="flex min-w-0 flex-1 flex-col gap-3 p-6 max-sm:p-4">
+        {!canView(access, "script") ? <NoAccess t={t} /> : <main className="flex min-w-0 flex-1 flex-col gap-3 p-6 max-sm:p-4">
           {scripts?.length ? (
             <section aria-label={s.title} className="card overflow-hidden">
               {scripts.map((sc) => {
@@ -86,8 +92,8 @@ export default async function ScriptsPage({ params }: PageProps<"/projects/[id]/
               <p className="mt-1 text-body">{s.emptyHint}</p>
             </div>
           )}
-          <NewScript projectId={id} t={t} defaultLanguage={locale} />
-        </main>
+          {editable ? <NewScript projectId={id} t={t} defaultLanguage={locale} /> : null}
+        </main>}
       </div>
     </>
   );

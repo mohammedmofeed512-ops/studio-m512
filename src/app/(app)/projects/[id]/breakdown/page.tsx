@@ -13,6 +13,9 @@ import { isUuid, loadProjectScenes } from "@/lib/production/load";
 import { ELEMENT_CATEGORIES, type ElementCategory } from "@/lib/database.types";
 import { getI18n } from "@/lib/i18n/server";
 import { getViewer } from "@/lib/viewer";
+import { getAccess } from "@/lib/access";
+import { canEdit, canView } from "@/lib/permissions";
+import { EditGate, NoAccessPage, ReadOnlyBanner } from "@/components/access";
 
 export const metadata: Metadata = { title: "Breakdown" };
 
@@ -21,8 +24,10 @@ export default async function BreakdownPage({ params, searchParams }: PageProps<
   if (!isUuid(id)) notFound();
   const sp = await searchParams;
   const [{ t, locale }, { supabase }] = await Promise.all([getI18n(), getViewer()]);
-  const { project, scripts, script, scenes, lines } = await loadProjectScenes(supabase, id, sp.script);
-  if (!project) notFound();
+  const [{ project, scripts, script, scenes, lines }, access] = await Promise.all([loadProjectScenes(supabase, id, sp.script), getAccess(id)]);
+  if (!project || !access) notFound();
+  if (!canView(access, "breakdown")) return <NoAccessPage projectId={id} projectName={project.name} title={t.breakdown.title} t={t} />;
+  const editable = canEdit(access, "breakdown");
 
   const b = t.breakdown;
   const view = sp.view === "report" ? "report" : "scenes";
@@ -61,7 +66,7 @@ export default async function BreakdownPage({ params, searchParams }: PageProps<
         {script ? (
           <>
             <ScriptSwitcher scripts={scripts} activeId={script.id} hrefFor={(sid) => `${base}?script=${sid}`} label={b.script} />
-            <AutoCastButton projectId={id} scriptId={script.id} label={b.autoCast} hint={b.autoCastHint} />
+            {editable ? <AutoCastButton projectId={id} scriptId={script.id} label={b.autoCast} hint={b.autoCastHint} /> : null}
             <div role="group" className="flex rounded-md bg-[#F1F2F6] p-0.5">
               <Link href={q({})} aria-current={view === "scenes" ? "page" : undefined} className={`flex h-7 items-center rounded-[5px] px-3 text-[12px] font-bold ${view === "scenes" ? "bg-white shadow-sm" : "text-muted"}`}>
                 {t.scripts.scenes}
@@ -73,6 +78,7 @@ export default async function BreakdownPage({ params, searchParams }: PageProps<
           </>
         ) : null}
       </SubToolbar>
+      {!editable ? <ReadOnlyBanner t={t} /> : null}
 
       <div className="flex flex-1 max-md:flex-col">
         <ProjectSidebar projectId={id} />
@@ -145,6 +151,7 @@ export default async function BreakdownPage({ params, searchParams }: PageProps<
           <>
             <ScenePicker scenes={scenes} activeId={activeScene.id} hrefFor={(sid) => q({ scene: sid })} counts={counts} countLabel={b.elementsCount} locale={locale} t={t} />
             <main className="min-w-0 flex-1 p-5 max-sm:p-3">
+              <EditGate editable={editable}>
               <BreakdownScene
                 key={activeScene.id}
                 projectId={id}
@@ -154,6 +161,7 @@ export default async function BreakdownPage({ params, searchParams }: PageProps<
                 tags={sceneTags}
                 t={{ breakdown: t.breakdown, categories: t.categories, common: t.common }}
               />
+              </EditGate>
             </main>
           </>
         )}

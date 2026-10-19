@@ -13,6 +13,9 @@ import { formatEighths } from "@/lib/screenplay/model";
 import type { CallSheetData } from "@/lib/production/schedule";
 import { getI18n } from "@/lib/i18n/server";
 import { getViewer } from "@/lib/viewer";
+import { getAccess } from "@/lib/access";
+import { canEdit, canView } from "@/lib/permissions";
+import { EditGate, NoAccessPage, ReadOnlyBanner } from "@/components/access";
 
 export const metadata: Metadata = { title: "Call Sheet" };
 
@@ -26,15 +29,18 @@ export default async function CallSheetPage({ params }: PageProps<"/projects/[id
     supabase.from("shoot_days").select("*, shoot_day_scenes(scene_id)").eq("id", dayId).eq("project_id", id).maybeSingle(),
     supabase.from("shoot_days").select("id, day_number").eq("project_id", id).order("day_number"),
   ]);
-  if (!project || !day) notFound();
+  const access = await getAccess(id);
+  if (!project || !day || !access) notFound();
+  if (!canView(access, "call_sheets")) return <NoAccessPage projectId={id} projectName={project.name} title={t.callSheets.title} t={t} />;
+  const editable = canEdit(access, "call_sheets");
 
-  // Each shoot day has exactly one call sheet, created the first time it is opened.
-  await supabase.from("call_sheets").upsert({ shoot_day_id: dayId }, { onConflict: "shoot_day_id", ignoreDuplicates: true });
+  // Each shoot day gets its call sheet when the day is created; older days get one here.
+  if (editable) await supabase.from("call_sheets").upsert({ shoot_day_id: dayId }, { onConflict: "shoot_day_id", ignoreDuplicates: true });
   const sceneIds = day.shoot_day_scenes.map((x) => x.scene_id);
   const [{ data: sheet }, { data: rpc }, { data: contacts }, { data: castLinks }] = await Promise.all([
     supabase.from("call_sheets").select("*").eq("shoot_day_id", dayId).single(),
     supabase.rpc("call_sheet_for_day", { p_day: dayId }),
-    supabase.from("contacts").select("id, full_name, kind, role, phone, email").order("full_name"),
+    supabase.from("contacts").select("id, full_name, kind, role, phone, email").eq("owner_id", access.ownerId).order("full_name"),
     sceneIds.length
       ? supabase.from("scene_elements").select("element:elements!inner(id, name, cast_number, contact_id, category)").in("scene_id", sceneIds).eq("element.category", "cast")
       : Promise.resolve({ data: [] as Array<{ element: { id: string; name: string; cast_number: number | null; contact_id: string | null } }> }),
@@ -100,9 +106,11 @@ export default async function CallSheetPage({ params }: PageProps<"/projects/[id
           {cs.preview}
         </a>
       </SubToolbar>
+      {!editable ? <ReadOnlyBanner t={t} /> : null}
 
       <div className="flex flex-1 max-md:flex-col">
         <ProjectSidebar projectId={id} />
+        <EditGate editable={editable}>
         <main className="grid min-w-0 flex-1 grid-cols-[repeat(auto-fit,minmax(380px,1fr))] content-start gap-3 p-5 max-sm:grid-cols-1 max-sm:p-3">
           <div className="flex min-w-0 flex-col gap-3">
             <section aria-labelledby="det-h" className="card overflow-hidden">
@@ -236,6 +244,7 @@ export default async function CallSheetPage({ params }: PageProps<"/projects/[id
             kinds={t.contactKinds}
           />
         </main>
+        </EditGate>
       </div>
     </>
   );

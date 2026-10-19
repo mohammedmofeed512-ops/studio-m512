@@ -13,6 +13,9 @@ import type { Json } from "@/lib/database.types";
 import { getI18n } from "@/lib/i18n/server";
 import { dictionaries } from "@/lib/i18n/dictionaries";
 import { getViewer } from "@/lib/viewer";
+import { getAccess } from "@/lib/access";
+import { canEdit, canView } from "@/lib/permissions";
+import { ReadOnlyBanner } from "@/components/access";
 
 const UUID = /^[0-9a-f-]{36}$/i;
 
@@ -27,7 +30,9 @@ export async function generateMetadata({ params }: PageProps<"/projects/[id]/scr
 export default async function ScriptPage({ params }: PageProps<"/projects/[id]/scripts/[scriptId]">) {
   const { id, scriptId } = await params;
   if (!UUID.test(id) || !UUID.test(scriptId)) notFound();
-  const [{ t, formatDate }, { supabase }] = await Promise.all([getI18n(), getViewer()]);
+  const [{ t, formatDate }, { supabase, name: viewerName }, access] = await Promise.all([getI18n(), getViewer(), getAccess(id)]);
+  if (!access || !canView(access, "script")) notFound();
+  const editable = canEdit(access, "script");
 
   const [{ data: script }, { data: project }, { data: versions }] = await Promise.all([
     supabase.from("scripts").select("*").eq("id", scriptId).eq("project_id", id).maybeSingle(),
@@ -37,7 +42,7 @@ export default async function ScriptPage({ params }: PageProps<"/projects/[id]/s
   if (!script || !project) notFound();
 
   // A script whose first version failed to store gets a fresh blank version, so it can be edited and saved.
-  if (!script.current_version_id) {
+  if (!script.current_version_id && editable) {
     const blank = script.kind === "av" ? emptyAvDoc() : linesToDoc([{ kind: "sceneHeading", text: "", sceneId: crypto.randomUUID() }]);
     const { data: repaired } = await supabase
       .from("script_versions")
@@ -50,7 +55,7 @@ export default async function ScriptPage({ params }: PageProps<"/projects/[id]/s
     }
   }
 
-  const { data: current } = await supabase.from("script_versions").select("content, version_number, revision_color").eq("id", script.current_version_id ?? "").maybeSingle();
+  const { data: current } = await supabase.from("script_versions").select("content, version_number, revision_color, content_updated_at").eq("id", script.current_version_id ?? "").maybeSingle();
   const s = t.scripts;
   const color = (current?.revision_color ?? "white") as RevisionColor;
   const language = script.language === "en" ? "en" : "ar";
@@ -88,7 +93,7 @@ export default async function ScriptPage({ params }: PageProps<"/projects/[id]/s
           <details className="relative">
             <summary className="btn-soft h-8 cursor-pointer list-none [&::-webkit-details-marker]:hidden">{s.versions}</summary>
             <div className="absolute end-0 top-10 z-30 w-[300px] rounded-[10px] border border-line bg-white p-3 shadow-lg">
-              <form action={createRevision} className="mb-3 flex items-end gap-2 border-b border-line pb-3">
+              {editable ? <form action={createRevision} className="mb-3 flex items-end gap-2 border-b border-line pb-3">
                 <input type="hidden" name="script_id" value={script.id} />
                 <label className="flex-1">
                   <span className="label">{s.revisionColor}</span>
@@ -101,7 +106,7 @@ export default async function ScriptPage({ params }: PageProps<"/projects/[id]/s
                   </select>
                 </label>
                 <button className="btn-primary h-9">{s.createRevision}</button>
-              </form>
+              </form> : null}
               <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto">
                 {(versions ?? []).map((v) => {
                   const isCurrent = v.id === script.current_version_id;
@@ -116,7 +121,7 @@ export default async function ScriptPage({ params }: PageProps<"/projects/[id]/s
                       </span>
                       {isCurrent ? (
                         <span className="badge bg-tint text-accent-ink">{s.current}</span>
-                      ) : (
+                      ) : !editable ? null : (
                         <form action={switchVersion}>
                           <input type="hidden" name="script_id" value={script.id} />
                           <input type="hidden" name="version_id" value={v.id} />
@@ -129,7 +134,7 @@ export default async function ScriptPage({ params }: PageProps<"/projects/[id]/s
               </ul>
             </div>
           </details>
-          <details className="relative">
+          {editable ? <details className="relative">
             <summary className="btn-ghost h-8 cursor-pointer list-none [&::-webkit-details-marker]:hidden">⋯</summary>
             <div className="absolute end-0 top-10 z-30 w-[280px] rounded-[10px] border border-line bg-white p-3 shadow-lg">
               <form action={renameScript} className="mb-2 flex items-end gap-2">
@@ -147,22 +152,26 @@ export default async function ScriptPage({ params }: PageProps<"/projects/[id]/s
                 </ConfirmButton>
               </form>
             </div>
-          </details>
+          </details> : null}
           <a href={`/print/scripts/${script.id}`} target="_blank" rel="noopener" className="btn-primary h-8">
             {s.exportPdf}
           </a>
         </SubToolbar>
+        {!editable ? <ReadOnlyBanner t={t} /> : null}
       </div>
 
       {script.kind === "av" ? (
-        <AvEditor key={script.current_version_id} scriptId={script.id} initialContent={current?.content} language={language} t={s} />
+        <AvEditor key={script.current_version_id} scriptId={script.id} initialContent={current?.content} language={language} t={s} presence={t.presence} readOnly={!editable} baseStamp={current?.content_updated_at ?? null} />
       ) : (
         <ScreenplayEditor
           key={script.current_version_id}
           scriptId={script.id}
           initialContent={current?.content}
           language={language}
-          labels={{ scripts: s, elements: t.elements, placeholders: dictionaries[language].placeholders }}
+          labels={{ scripts: s, elements: t.elements, placeholders: dictionaries[language].placeholders, presence: t.presence }}
+          readOnly={!editable}
+          baseStamp={current?.content_updated_at ?? null}
+          viewerName={viewerName}
         />
       )}
     </>

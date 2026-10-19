@@ -1,13 +1,32 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { saveScriptContent } from "@/lib/script-actions";
+import { saveScriptContent, type SaveResult } from "@/lib/script-actions";
+import { ConflictBar } from "./collab";
 import { estimateSeconds, formatDuration, newRowId, rowSeconds, sanitizeAvDoc, timecodes, totalSeconds, type AvRow } from "@/lib/screenplay/av";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 
 type SaveState = "saved" | "dirty" | "saving" | "error";
 
-export function AvEditor({ scriptId, initialContent, language, t }: { scriptId: string; initialContent: unknown; language: "ar" | "en"; t: Dictionary["scripts"] }) {
+export function AvEditor({
+  scriptId,
+  initialContent,
+  language,
+  t,
+  presence,
+  readOnly = false,
+  baseStamp = null,
+}: {
+  scriptId: string;
+  initialContent: unknown;
+  language: "ar" | "en";
+  t: Dictionary["scripts"];
+  presence: Dictionary["presence"];
+  readOnly?: boolean;
+  baseStamp?: string | null;
+}) {
+  const [conflict, setConflict] = useState<string | null>(null);
+  const base = useRef<string | null | undefined>(baseStamp ?? undefined);
   const [rows, setRows] = useState<AvRow[]>(() => {
     const doc = sanitizeAvDoc(initialContent);
     return doc.rows.length ? doc.rows : [{ id: newRowId(), video: "", audio: "", seconds: null }];
@@ -22,7 +41,14 @@ export function AvEditor({ scriptId, initialContent, language, t }: { scriptId: 
     if (!dirty.current) return;
     dirty.current = false;
     setSaveState("saving");
-    const result = await saveScriptContent(scriptId, { type: "av", rows: latest.current }).catch((e: unknown) => ({ ok: false as const, error: e instanceof Error ? e.message : String(e) }));
+    const result: SaveResult = await saveScriptContent(scriptId, { type: "av", rows: latest.current }, base.current).catch((e: unknown) => ({ ok: false as const, error: e instanceof Error ? e.message : String(e) }));
+    if (result.ok) base.current = result.savedAt;
+    if (!result.ok && result.conflict) {
+      dirty.current = true;
+      setConflict(result.conflict.by);
+      setSaveState("error");
+      return;
+    }
     if (dirty.current) return;
     setSaveState(result.ok ? "saved" : "error");
     setSaveError(result.ok ? "" : result.error);
@@ -66,6 +92,24 @@ export function AvEditor({ scriptId, initialContent, language, t }: { scriptId: 
 
   return (
     <div className="flex-1 px-6 py-6 max-sm:px-3">
+      {conflict !== null ? (
+        <div className="-mx-6 -mt-6 mb-4 max-sm:-mx-3">
+          <ConflictBar
+            by={conflict}
+            t={presence}
+            onReload={() => {
+              dirty.current = false;
+              window.location.reload();
+            }}
+            onOverwrite={() => {
+              setConflict(null);
+              base.current = null;
+              void flush();
+            }}
+          />
+        </div>
+      ) : null}
+      <fieldset disabled={readOnly} className="contents">
       <div className="no-print mb-3 flex flex-wrap items-center gap-3">
         <span className="badge bg-tint text-accent-ink">
           {t.avTotal}: {formatDuration(total)}
@@ -152,9 +196,10 @@ export function AvEditor({ scriptId, initialContent, language, t }: { scriptId: 
           );
         })}
       </div>
-      <button type="button" onClick={() => update([...rows, { id: newRowId(), video: "", audio: "", seconds: null }])} className="no-print btn-soft mt-3">
+      <button type="button" onClick={() => update([...rows, { id: newRowId(), video: "", audio: "", seconds: null }])} className={`no-print btn-soft mt-3 ${readOnly ? "hidden" : ""}`}>
         {t.avAddRow}
       </button>
+      </fieldset>
     </div>
   );
 }

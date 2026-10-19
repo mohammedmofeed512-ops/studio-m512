@@ -4,8 +4,8 @@ import { useActionState, useState } from "react";
 import { signIn, signUp, type FormState } from "@/lib/actions";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 
-export function LoginForm({ t }: { t: Dictionary["login"] }) {
-  const [mode, setMode] = useState<"in" | "up">("in");
+export function LoginForm({ t, next = "", email = "", startMode = "in" }: { t: Dictionary["login"]; next?: string; email?: string; startMode?: "in" | "up" }) {
+  const [mode, setMode] = useState<"in" | "up">(startMode);
   const [inState, inAction, inPending] = useActionState<FormState, FormData>(signIn, undefined);
   const [upState, upAction, upPending] = useActionState<FormState, FormData>(signUp, undefined);
   const state = mode === "in" ? inState : upState;
@@ -18,6 +18,7 @@ export function LoginForm({ t }: { t: Dictionary["login"] }) {
     <>
       <h1 className="mb-7 text-center text-[20px] font-extrabold">{mode === "in" ? t.title : t.signUpTitle}</h1>
       <form key={mode} action={mode === "in" ? inAction : upAction} className="flex flex-col gap-4">
+        {next ? <input type="hidden" name="next" value={next} /> : null}
         {mode === "up" ? (
           <div>
             <label htmlFor="full_name" className="label">
@@ -30,7 +31,7 @@ export function LoginForm({ t }: { t: Dictionary["login"] }) {
           <label htmlFor="email" className="label">
             {t.email}
           </label>
-          <input id="email" name="email" type="email" required autoComplete="email" dir="ltr" className="field text-start" />
+          <input id="email" name="email" type="email" required autoComplete="email" dir="ltr" defaultValue={email} className="field text-start" />
         </div>
         <div>
           <label htmlFor="password" className="label">

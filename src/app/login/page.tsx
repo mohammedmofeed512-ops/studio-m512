@@ -6,7 +6,11 @@ import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = { title: "Sign in" };
 
-export default async function LoginPage() {
+export default async function LoginPage({ searchParams }: PageProps<"/login">) {
+  const sp = await searchParams;
+  const next = typeof sp.next === "string" ? sp.next : "";
+  const email = typeof sp.email === "string" ? sp.email.slice(0, 320) : "";
+  const startMode = sp.mode === "up" ? "up" : "in";
   const { t, locale } = await getI18n();
   const other = locale === "ar" ? "en" : "ar";
   return (
@@ -32,7 +36,7 @@ export default async function LoginPage() {
               <IconLogo size={28} />
             </span>
           </div>
-          <LoginForm t={t.login} />
+          <LoginForm t={t.login} next={next} email={email} startMode={startMode} />
         </section>
       </main>
     </div>

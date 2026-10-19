@@ -9,11 +9,11 @@ export const metadata: Metadata = { title: "Projects" };
 
 export default async function ProjectsPage({ searchParams }: PageProps<"/projects">) {
   const view = (await searchParams).view === "archived" ? "archived" : "all";
-  const [{ t, formatDate }, { supabase }] = await Promise.all([getI18n(), getViewer()]);
+  const [{ t, formatDate }, { supabase, userId }] = await Promise.all([getI18n(), getViewer()]);
 
   const { data: all } = await supabase
     .from("projects")
-    .select("id, name, type, stage, cover_color, client_name, delivery_date")
+    .select("id, name, type, stage, cover_color, client_name, delivery_date, owner_id")
     .order("updated_at", { ascending: false });
 
   const archived = (all ?? []).filter((p) => p.stage === "archived");
@@ -54,6 +54,7 @@ export default async function ProjectsPage({ searchParams }: PageProps<"/project
                 <Link key={p.id} href={`/projects/${p.id}`} className="card group overflow-hidden transition-shadow hover:shadow-[0_2px_12px_rgba(29,30,44,0.08)]">
                   <div className="flex h-28 items-end p-3.5" style={{ background: p.cover_color ?? "#2B3240" }}>
                     <span className="badge bg-white/90 text-ink">{t.projectTypes[p.type]}</span>
+                    {p.owner_id !== userId ? <span className="badge ms-1.5 bg-accent text-white">{t.team.shared}</span> : null}
                   </div>
                   <div className="flex flex-col gap-1 px-4 py-3.5">
                     <h2 className="truncate text-[15px] font-extrabold group-hover:text-accent-ink">{p.name}</h2>

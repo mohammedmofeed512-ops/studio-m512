@@ -11,6 +11,9 @@ import { isUuid, loadProjectScenes } from "@/lib/production/load";
 import { signMedia } from "@/lib/supabase/media";
 import { getI18n } from "@/lib/i18n/server";
 import { getViewer } from "@/lib/viewer";
+import { getAccess } from "@/lib/access";
+import { canEdit, canView } from "@/lib/permissions";
+import { EditGate, NoAccessPage, ReadOnlyBanner } from "@/components/access";
 
 export const metadata: Metadata = { title: "Shots" };
 
@@ -19,8 +22,10 @@ export default async function ShotsPage({ params, searchParams }: PageProps<"/pr
   if (!isUuid(id)) notFound();
   const sp = await searchParams;
   const [{ t, locale }, { supabase, userId }] = await Promise.all([getI18n(), getViewer()]);
-  const { project, scripts, script, scenes } = await loadProjectScenes(supabase, id, sp.script);
-  if (!project) notFound();
+  const [{ project, scripts, script, scenes }, access] = await Promise.all([loadProjectScenes(supabase, id, sp.script), getAccess(id)]);
+  if (!project || !access) notFound();
+  if (!canView(access, "shots")) return <NoAccessPage projectId={id} projectName={project.name} title={t.shots.title} t={t} />;
+  const editable = canEdit(access, "shots");
 
   const s = t.shots;
   const view = sp.view === "list" ? "list" : "storyboard";
@@ -71,6 +76,7 @@ export default async function ShotsPage({ params, searchParams }: PageProps<"/pr
           </>
         ) : null}
       </SubToolbar>
+      {!editable ? <ReadOnlyBanner t={t} /> : null}
 
       <div className="flex flex-1 max-md:flex-col">
         <ProjectSidebar projectId={id} />
@@ -91,6 +97,7 @@ export default async function ShotsPage({ params, searchParams }: PageProps<"/pr
           <>
             <ScenePicker scenes={scenes} activeId={activeScene.id} hrefFor={(sid) => q({ scene: sid })} counts={counts} countLabel={s.shotsCount} locale={locale} t={t} />
             <main className="min-w-0 flex-1 p-5 max-sm:p-3">
+              <EditGate editable={editable}>
               <ShotBoard
                 key={activeScene.id}
                 projectId={id}
@@ -100,6 +107,7 @@ export default async function ShotsPage({ params, searchParams }: PageProps<"/pr
                 initialShots={sceneShots.map((sh) => ({ ...sh, imageUrl: sh.image_path ? (urls.get(sh.image_path) ?? null) : null }))}
                 t={{ shots: s, shotSizes: t.shotSizes, shotAngles: t.shotAngles, shotMovements: t.shotMovements, common: t.common }}
               />
+              </EditGate>
             </main>
           </>
         )}

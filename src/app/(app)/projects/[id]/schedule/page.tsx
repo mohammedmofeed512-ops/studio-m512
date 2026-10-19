@@ -11,6 +11,9 @@ import { isUuid, loadProjectScenes } from "@/lib/production/load";
 import type { StripScene } from "@/lib/production/schedule";
 import { getI18n } from "@/lib/i18n/server";
 import { getViewer } from "@/lib/viewer";
+import { getAccess } from "@/lib/access";
+import { canEdit, canView } from "@/lib/permissions";
+import { NoAccessPage, ReadOnlyBanner } from "@/components/access";
 
 export const metadata: Metadata = { title: "Schedule" };
 
@@ -27,9 +30,13 @@ export default async function SchedulePage({ params, searchParams }: PageProps<"
       .select("id, scene_number, int_ext, location_name, day_night, page_eighths, synopsis, script:scripts!inner(project_id)")
       .eq("script.project_id", id),
     supabase.from("elements").select("cast_number, scene_elements(scene_id)").eq("project_id", id).eq("category", "cast").not("cast_number", "is", null).order("cast_number"),
-    supabase.from("contacts").select("id, full_name").eq("kind", "location").order("full_name"),
+    supabase.from("contacts").select("id, full_name, owner_id").eq("kind", "location").order("full_name"),
   ]);
-  if (!project) notFound();
+  const access = await getAccess(id);
+  if (!project || !access) notFound();
+  if (!canView(access, "schedule")) return <NoAccessPage projectId={id} projectName={project.name} title={t.schedule.title} t={t} />;
+  const editable = canEdit(access, "schedule");
+  const canSheets = canView(access, "call_sheets");
 
   const sceneMap: Record<string, StripScene> = {};
   for (const sc of allScenes ?? []) {
@@ -69,6 +76,7 @@ export default async function SchedulePage({ params, searchParams }: PageProps<"
       <SubToolbar icon={<IconCalendar size={14} />} title={s.title} meta={s.stripboard}>
         {script ? <ScriptSwitcher scripts={scripts} activeId={script.id} hrefFor={(sid) => `/projects/${id}/schedule?script=${sid}`} label={t.breakdown.script} /> : null}
       </SubToolbar>
+      {!editable ? <ReadOnlyBanner t={t} /> : null}
       <div className="flex flex-1 max-md:flex-col">
         <ProjectSidebar projectId={id} />
         <main className="flex min-w-0 flex-1 flex-col">
@@ -90,8 +98,10 @@ export default async function SchedulePage({ params, searchParams }: PageProps<"
               initialDays={boardDays}
               initialBank={bank}
               cast={cast}
-              locations={locations ?? []}
+              locations={(locations ?? []).filter((l) => l.owner_id === access.ownerId)}
               locale={locale}
+              readOnly={!editable}
+              showCallSheets={canSheets}
               t={{ schedule: s, common: t.common, ...slugLabels(locale) }}
             />
           )}

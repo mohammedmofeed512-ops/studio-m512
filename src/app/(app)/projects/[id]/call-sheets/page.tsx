@@ -7,6 +7,9 @@ import { IconCalendar } from "@/components/icons";
 import { isUuid } from "@/lib/production/load";
 import { getI18n } from "@/lib/i18n/server";
 import { getViewer } from "@/lib/viewer";
+import { getAccess } from "@/lib/access";
+import { canView } from "@/lib/permissions";
+import { NoAccessPage } from "@/components/access";
 
 export const metadata: Metadata = { title: "Call Sheets" };
 
@@ -22,7 +25,9 @@ export default async function CallSheetsPage({ params }: PageProps<"/projects/[i
       .eq("project_id", id)
       .order("day_number"),
   ]);
-  if (!project) notFound();
+  const access = await getAccess(id);
+  if (!project || !access) notFound();
+  if (!canView(access, "call_sheets")) return <NoAccessPage projectId={id} projectName={project.name} title={t.callSheets.title} t={t} />;
   const cs = t.callSheets;
 
   return (
