@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useState, useTransition } from "react";
-import { updateAccount } from "@/lib/admin-actions";
+import { deleteAccount, updateAccount } from "@/lib/admin-actions";
 import { formatBytes } from "@/lib/plan";
 import { matchesSearch } from "@/lib/project-tools";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -24,6 +24,50 @@ export type AccountRow = {
   created_at: string;
   last_sign_in_at: string | null;
 };
+
+function DeleteAccount({ row, t, onDeleted }: { row: AccountRow; t: Dictionary["admin"]; onDeleted: () => void }) {
+  const [typed, setTyped] = useState("");
+  const [status, setStatus] = useState("");
+  const [pending, start] = useTransition();
+  const isAdmin = row.role === "admin";
+  const matches = typed.trim().toLowerCase() === row.email.toLowerCase();
+  const id = `delete-${row.user_id}`;
+  return (
+    <div className="border-t border-warn/30 bg-warn-tint/30 p-4">
+      <h3 className="text-[13px] font-extrabold text-warn">{t.deleteTitle}</h3>
+      <p className="mt-1 max-w-[70ch] text-[12px] text-muted">{isAdmin ? t.deleteAdmin : t.deleteHelp}</p>
+      {isAdmin ? null : (
+        <form
+          className="mt-3 flex flex-wrap items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!matches) return setStatus(t.deleteConfirmMismatch);
+            start(async () => {
+              const r = await deleteAccount({ userId: row.user_id, email: row.email, confirmEmail: typed });
+              if (r.ok) {
+                setStatus(t.deleted);
+                onDeleted();
+                return;
+              }
+              setStatus(r.error === "admin" ? t.deleteAdmin : r.error === "self" ? t.deleteSelf : r.error === "confirm" ? t.deleteConfirmMismatch : t.failed);
+            });
+          }}
+        >
+          <label htmlFor={id} className="min-w-[240px] flex-1">
+            <span className="label">{t.deleteConfirmLabel}</span>
+            <input id={id} dir="ltr" autoComplete="off" className="field" value={typed} placeholder={row.email} onChange={(e) => setTyped(e.target.value)} />
+          </label>
+          <button className="btn h-10 bg-warn px-4 text-white hover:bg-warn/90" disabled={pending || !matches}>
+            {pending ? t.deleting : t.deleteButton}
+          </button>
+          <span role="status" className="w-full text-[12px] font-semibold text-warn">
+            {status}
+          </span>
+        </form>
+      )}
+    </div>
+  );
+}
 
 function Editor({ row, plans, t, onDone }: { row: AccountRow; plans: Array<{ id: string; name: string }>; t: Dictionary["admin"]; onDone: () => void }) {
   const [form, setForm] = useState({
@@ -191,6 +235,7 @@ export function AccountsTable({
                   <tr>
                     <td colSpan={6} className="border-b border-line p-0">
                       <Editor row={r} plans={plans} t={t} onDone={() => setOpen(null)} />
+                      <DeleteAccount row={r} t={t} onDeleted={() => setOpen(null)} />
                     </td>
                   </tr>
                 ) : null}

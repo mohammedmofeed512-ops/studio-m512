@@ -46,6 +46,35 @@ export async function updateAccount(input: {
   return { ok: true };
 }
 
+export type DeleteResult = { ok: true } | { ok: false; error: "self" | "admin" | "confirm" | "failed" };
+
+/**
+ * Deletes an account and everything it owns, so the person can sign up again with the same email.
+ * The admin types the account's email to confirm. Media files go after the account is gone.
+ */
+export async function deleteAccount(input: { userId: string; confirmEmail: string; email: string }): Promise<DeleteResult> {
+  const { supabase, userId } = await requireUser();
+  if (!UUID.test(input.userId)) return { ok: false, error: "failed" };
+  if (input.userId === userId) return { ok: false, error: "self" };
+  const email = String(input.email ?? "").trim().toLowerCase();
+  if (!email || String(input.confirmEmail ?? "").trim().toLowerCase() !== email) return { ok: false, error: "confirm" };
+
+  const { data: files, error: listError } = await supabase.rpc("admin_account_media", { p_user: input.userId });
+  if (listError) return { ok: false, error: "failed" };
+
+  const { error } = await supabase.rpc("admin_delete_account", { p_user: input.userId });
+  if (error) {
+    if (error.message.includes("cannot_delete_self")) return { ok: false, error: "self" };
+    if (error.message.includes("cannot_delete_admin")) return { ok: false, error: "admin" };
+    return { ok: false, error: "failed" };
+  }
+
+  const names = ((files ?? []) as unknown[]).map(String);
+  for (let i = 0; i < names.length; i += 100) await supabase.storage.from("media").remove(names.slice(i, i + 100));
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
 /** Creates or updates a plan (row security only lets admins write plans). */
 export async function savePlan(input: {
   id: string;

@@ -354,6 +354,8 @@ export type Database = {
         };
         Returns: undefined;
       };
+      admin_account_media: { Args: { p_user: string }; Returns: string[] };
+      admin_delete_account: { Args: { p_user: string }; Returns: undefined };
     };
     Enums: Enums;
     CompositeTypes: { [_ in never]: never };
