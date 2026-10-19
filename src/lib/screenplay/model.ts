@@ -38,8 +38,9 @@ export function nextOnTab(kind: ElementKind, reverse = false): ElementKind {
 }
 
 // ───────────── scene headings ─────────────
-const INT_EXT_AR = /^(?:\d+[.\-\s]*)?\s*(داخلي\s*[-/]\s*خارجي|خارجي\s*[-/]\s*داخلي|داخلي|خارجي|د\.\s*خ\.|د\.|خ\.)[.\s:،-]*/;
-const INT_EXT_EN = /^(?:\d+[A-Z]?[.\s]*)?\s*(INT\.?\s*\/\s*EXT\.?|EXT\.?\s*\/\s*INT\.?|I\/E\.?|INT\.|EXT\.|INT\s|EXT\s|EST\.)\s*/i;
+const SCENE_PREFIX = /^(?:(?:مشهد|المشهد|SCENE)\s*)?/i;
+const INT_EXT_AR = /^(?:(?:مشهد|المشهد)\s*)?(?:\d+[.\-\s—–:]*)?\s*(داخلي\s*[-/]\s*خارجي|خارجي\s*[-/]\s*داخلي|داخلي|خارجي|د\.\s*خ\.|د\.|خ\.)[.\s:،-]*/;
+const INT_EXT_EN = /^(?:(?:مشهد|المشهد|SCENE)\s*)?(?:\d+[A-Z]?[.\s—–:-]*)?\s*(INT\.?\s*\/\s*EXT\.?|EXT\.?\s*\/\s*INT\.?|I\/E\.?|INT\.|EXT\.|INT\s|EXT\s|EST\.)\s*/i;
 
 const DAY_NIGHT: Array<[RegExp, DayNight]> = [
   [/(ليل|ليلاً|ليلي|NIGHT)/i, "night"],
@@ -159,7 +160,7 @@ export function pageBreaks(lines: Array<Pick<ScriptLine, "kind" | "text">>): num
 
 /** Scene number shown for each heading: an explicit leading number, otherwise its position. */
 export function sceneNumberFor(text: string, sequence: number): string {
-  return text.trim().match(/^(\d+[A-Za-z]?)[.\s]/)?.[1] ?? String(sequence);
+  return text.trim().replace(SCENE_PREFIX, "").match(/^(\d+[A-Za-z]?)[.\s—–:-]/)?.[1] ?? String(sequence);
 }
 
 export type ExtractedScene = {

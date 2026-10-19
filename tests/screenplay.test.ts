@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { classifyLines, parseFdx, parseFountain, textToRawLines } from "../src/lib/screenplay/import";
-import { extractScenes, formatEighths, looksLikeSceneHeading, parseSceneHeading, linesToDoc, docToLines, nextOnTab } from "../src/lib/screenplay/model";
+import { extractScenes, formatEighths, sceneNumberFor, looksLikeSceneHeading, parseSceneHeading, linesToDoc, docToLines, nextOnTab } from "../src/lib/screenplay/model";
 
 test("Arabic scene headings", () => {
   assert.ok(looksLikeSceneHeading("1. داخلي. مطبخ بيت العائلة – نهار"));
@@ -105,4 +105,12 @@ test("page breaks and scene numbers", async () => {
   assert.equal(breaks[0], Math.floor((LINES_PER_PAGE - 1) / 2) + 1);
   assert.equal(sceneNumberFor("12A. INT. ROOM - DAY", 3), "12A");
   assert.equal(sceneNumberFor("داخلي. غرفة - ليل", 3), "3");
+});
+
+test("headings written as 'مشهد N — INT. المكان — NIGHT' parse fully", () => {
+  const h = "مشهد 3 — INT. شقة سلمى، المطبخ — NIGHT";
+  assert.equal(looksLikeSceneHeading(h), true);
+  assert.deepEqual(parseSceneHeading(h), { intExt: "int", location: "شقة سلمى، المطبخ", dayNight: "night" });
+  assert.equal(sceneNumberFor(h, 9), "3");
+  assert.deepEqual(parseSceneHeading("مشهد 4 — EXT. سطح البناية — CONTINUOUS"), { intExt: "ext", location: "سطح البناية", dayNight: "continuous" });
 });
