@@ -43,7 +43,7 @@ export async function signIn(_prev: FormState, fd: FormData): Promise<FormState>
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { error: "invalid" };
+  if (error) return { error: error.code === "email_not_confirmed" ? "notConfirmed" : "invalid" };
   redirect(safeNext(fd.get("next")));
 }
 
@@ -61,7 +61,15 @@ export async function signUp(_prev: FormState, fd: FormData): Promise<FormState>
     password,
     options: { data: { full_name: fullName }, emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(safeNext(fd.get("next")))}` },
   });
-  if (error) return { error: "failed" };
+  if (error) {
+    if (error.code === "weak_password") return { error: "weakPassword" };
+    if (error.code === "over_email_send_rate_limit" || error.code === "over_request_rate_limit") return { error: "rateLimit" };
+    // The account could not be saved because the confirmation email failed to send (mail server settings).
+    if (error.status === 500 || /email/i.test(error.message)) return { error: "emailSend" };
+    return { error: "failed" };
+  }
+  // Supabase answers a repeated sign-up with a user that has no identities, and sends nothing.
+  if (data.user && data.user.identities?.length === 0) return { error: "alreadyRegistered" };
   if (data.session) redirect(safeNext(fd.get("next")));
   return { message: "checkEmail" };
 }

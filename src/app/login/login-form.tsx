@@ -11,8 +11,15 @@ export function LoginForm({ t, next = "", email = "", startMode = "in" }: { t: D
   const state = mode === "in" ? inState : upState;
   const pending = mode === "in" ? inPending : upPending;
 
-  const message =
-    state?.message === "checkEmail" ? t.checkEmail : state?.error === "invalid" ? t.invalid : state?.error ? t.failed : "";
+  const errors = {
+    invalid: t.invalid,
+    notConfirmed: t.notConfirmed,
+    alreadyRegistered: t.alreadyRegistered,
+    weakPassword: t.weakPassword,
+    emailSend: t.emailSend,
+    rateLimit: t.rateLimit,
+  } as Record<string, string>;
+  const message = state?.message === "checkEmail" ? t.checkEmail : state?.error ? (errors[state.error] ?? t.failed) : "";
 
   return (
     <>

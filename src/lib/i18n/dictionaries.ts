@@ -29,6 +29,11 @@ const ar = {
     invalid: "البريد أو كلمة المرور غير صحيحة.",
     failed: "تعذّر إكمال العملية. حاول مرة أخرى.",
     passwordHint: "8 أحرف على الأقل",
+    notConfirmed: "لم يتم تأكيد بريدك بعد. افتح رابط التأكيد الذي وصلك ثم سجّل الدخول.",
+    alreadyRegistered: "هذا البريد مسجّل مسبقاً. سجّل الدخول بدلاً من إنشاء حساب جديد.",
+    weakPassword: "كلمة المرور ضعيفة. اختر كلمة أطول تجمع حروفاً وأرقاماً.",
+    emailSend: "تعذّر إرسال رسالة التأكيد الآن، فلم يُنشأ الحساب. حاول بعد قليل، وإن تكرر تواصل معنا.",
+    rateLimit: "محاولات كثيرة في وقت قصير. انتظر دقائق ثم حاول مجدداً.",
   },
   dashboard: {
     morning: "صباح الخير",
@@ -688,6 +693,11 @@ const en: Dictionary = {
     invalid: "Wrong email or password.",
     failed: "Something went wrong. Please try again.",
     passwordHint: "At least 8 characters",
+    notConfirmed: "Your email isn't confirmed yet. Open the confirmation link we sent, then sign in.",
+    alreadyRegistered: "This email already has an account. Sign in instead.",
+    weakPassword: "That password is too weak. Choose a longer one with letters and numbers.",
+    emailSend: "We couldn't send the confirmation email, so the account wasn't created. Try again shortly, or contact us if it keeps happening.",
+    rateLimit: "Too many attempts in a short time. Wait a few minutes and try again.",
   },
   dashboard: {
     morning: "Good morning",
