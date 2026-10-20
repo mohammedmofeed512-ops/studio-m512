@@ -29,7 +29,7 @@
                 <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
                   <tr>
                     <td style="background:#5D78FF;border-radius:8px;">
-                      <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 30px;color:#FFFFFF;font-size:15px;font-weight:bold;text-decoration:none;">تأكيد البريد والدخول إلى المنصة</a>
+                      <a href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=email" style="display:inline-block;padding:14px 30px;color:#FFFFFF;font-size:15px;font-weight:bold;text-decoration:none;">تأكيد البريد والدخول إلى المنصة</a>
                     </td>
                   </tr>
                 </table>
@@ -47,7 +47,7 @@
             <tr>
               <td style="padding:18px 32px 26px;border-top:1px solid #EDEEF3;font-size:12px;line-height:1.8;color:#8A8FA3;">
                 إن لم يعمل الزر، انسخ هذا الرابط في المتصفح:<br />
-                <a href="{{ .ConfirmationURL }}" style="color:#4560E6;word-break:break-all;" dir="ltr">{{ .ConfirmationURL }}</a><br /><br />
+                <a href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=email" style="color:#4560E6;word-break:break-all;" dir="ltr">{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=email</a><br /><br />
                 وصلتك هذه الرسالة لأن بريدك استُخدم للتسجيل في Studio M512. إن لم تكن أنت، تجاهلها ولن يُنشأ أي حساب.
               </td>
             </tr>

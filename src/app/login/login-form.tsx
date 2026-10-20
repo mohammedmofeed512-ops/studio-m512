@@ -1,13 +1,27 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { signIn, signUp, type FormState } from "@/lib/actions";
+import { resendConfirmation, signIn, signUp, type FormState } from "@/lib/actions";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 
-export function LoginForm({ t, next = "", email = "", startMode = "in" }: { t: Dictionary["login"]; next?: string; email?: string; startMode?: "in" | "up" }) {
+export function LoginForm({
+  t,
+  next = "",
+  email = "",
+  startMode = "in",
+  linkError = false,
+}: {
+  t: Dictionary["login"];
+  next?: string;
+  email?: string;
+  startMode?: "in" | "up";
+  linkError?: boolean;
+}) {
   const [mode, setMode] = useState<"in" | "up">(startMode);
+  const [typedEmail, setTypedEmail] = useState(email);
   const [inState, inAction, inPending] = useActionState<FormState, FormData>(signIn, undefined);
   const [upState, upAction, upPending] = useActionState<FormState, FormData>(signUp, undefined);
+  const [reState, reAction, rePending] = useActionState<FormState, FormData>(resendConfirmation, undefined);
   const state = mode === "in" ? inState : upState;
   const pending = mode === "in" ? inPending : upPending;
 
@@ -19,7 +33,13 @@ export function LoginForm({ t, next = "", email = "", startMode = "in" }: { t: D
     emailSend: t.emailSend,
     rateLimit: t.rateLimit,
   } as Record<string, string>;
-  const message = state?.message === "checkEmail" ? t.checkEmail : state?.error ? (errors[state.error] ?? t.failed) : "";
+  const message =
+    state?.message === "checkEmail" ? t.checkEmail : state?.error ? (errors[state.error] ?? t.failed) : linkError && !state ? t.linkError : "";
+  const isError = Boolean(state?.error) || (linkError && !state);
+
+  // Offer a fresh confirmation link wherever someone may be waiting for one.
+  const offerResend = state?.message === "checkEmail" || state?.error === "notConfirmed" || (linkError && !state);
+  const reMessage = reState?.message === "resent" ? t.resent : reState?.error ? (errors[reState.error] ?? t.failed) : "";
 
   return (
     <>
@@ -38,7 +58,17 @@ export function LoginForm({ t, next = "", email = "", startMode = "in" }: { t: D
           <label htmlFor="email" className="label">
             {t.email}
           </label>
-          <input id="email" name="email" type="email" required autoComplete="email" dir="ltr" defaultValue={email} className="field text-start" />
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+            dir="ltr"
+            value={typedEmail}
+            onChange={(e) => setTypedEmail(e.target.value)}
+            className="field text-start"
+          />
         </div>
         <div>
           <label htmlFor="password" className="label">
@@ -64,10 +94,27 @@ export function LoginForm({ t, next = "", email = "", startMode = "in" }: { t: D
         <button className="btn-primary mt-2 h-11 text-[13px]" disabled={pending}>
           {mode === "in" ? t.signIn : t.signUp}
         </button>
-        <p role="status" aria-live="polite" className={`min-h-5 text-center text-[12px] ${state?.error ? "text-warn" : "text-ok"}`}>
+        <p role="status" aria-live="polite" className={`min-h-5 text-center text-[12px] ${isError ? "text-warn" : "text-ok"}`}>
           {message}
         </p>
       </form>
+
+      {offerResend ? (
+        <form action={reAction} className="mb-3 rounded-md bg-ground/70 px-4 py-3 text-center">
+          <input type="hidden" name="email" value={typedEmail} />
+          {next ? <input type="hidden" name="next" value={next} /> : null}
+          <p className="mb-2 text-[12px] text-muted">{t.spamHint}</p>
+          <button className="btn-soft" disabled={rePending || !typedEmail}>
+            {t.resend}
+          </button>
+          {reMessage ? (
+            <p role="status" aria-live="polite" className={`mt-2 text-[12px] ${reState?.error ? "text-warn" : "text-ok"}`}>
+              {reMessage}
+            </p>
+          ) : null}
+        </form>
+      ) : null}
+
       <button type="button" onClick={() => setMode(mode === "in" ? "up" : "in")} className="mx-auto mt-1 block text-[12px] font-semibold text-accent-ink hover:underline">
         {mode === "in" ? t.toSignUp : t.toSignIn}
       </button>

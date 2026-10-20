@@ -74,6 +74,22 @@ export async function signUp(_prev: FormState, fd: FormData): Promise<FormState>
   return { message: "checkEmail" };
 }
 
+/** Sends the sign-up confirmation email again (for an account that exists but isn't confirmed). */
+export async function resendConfirmation(_prev: FormState, fd: FormData): Promise<FormState> {
+  const email = str(fd, "email", 320);
+  if (!email) return { error: "failed" };
+  const h = await headers();
+  const origin = h.get("origin") ?? `https://${h.get("host")}`;
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: { emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(safeNext(fd.get("next")))}` },
+  });
+  if (error) return { error: error.code === "over_email_send_rate_limit" || error.status === 429 ? "rateLimit" : "failed" };
+  return { message: "resent" };
+}
+
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();

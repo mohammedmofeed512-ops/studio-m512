@@ -11,6 +11,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const next = typeof sp.next === "string" ? sp.next : "";
   const email = typeof sp.email === "string" ? sp.email.slice(0, 320) : "";
   const startMode = sp.mode === "up" ? "up" : "in";
+  const linkError = sp.error === "link";
   const { t, locale } = await getI18n();
   const other = locale === "ar" ? "en" : "ar";
   return (
@@ -36,7 +37,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
               <IconLogo size={28} />
             </span>
           </div>
-          <LoginForm t={t.login} next={next} email={email} startMode={startMode} />
+          <LoginForm t={t.login} next={next} email={email} startMode={startMode} linkError={linkError} />
         </section>
       </main>
     </div>

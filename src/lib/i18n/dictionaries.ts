@@ -34,6 +34,10 @@ const ar = {
     weakPassword: "كلمة المرور ضعيفة. اختر كلمة أطول تجمع حروفاً وأرقاماً.",
     emailSend: "تعذّر إرسال رسالة التأكيد الآن، فلم يُنشأ الحساب. حاول بعد قليل، وإن تكرر تواصل معنا.",
     rateLimit: "محاولات كثيرة في وقت قصير. انتظر دقائق ثم حاول مجدداً.",
+    linkError: "رابط التأكيد منتهي أو استُخدم من قبل. سجّل الدخول، وإن لم يكن بريدك مؤكداً اطلب رابطاً جديداً.",
+    resend: "أرسل رابط التأكيد من جديد",
+    resent: "أرسلنا رابطاً جديداً. افتح أحدث رسالة في بريدك، وتفقّد مجلد الرسائل غير المرغوب فيها (Spam).",
+    spamHint: "لم تصلك الرسالة؟ تفقّد مجلد Spam أو «الترويج»، أو اطلب رابطاً جديداً.",
   },
   dashboard: {
     morning: "صباح الخير",
@@ -698,6 +702,10 @@ const en: Dictionary = {
     weakPassword: "That password is too weak. Choose a longer one with letters and numbers.",
     emailSend: "We couldn't send the confirmation email, so the account wasn't created. Try again shortly, or contact us if it keeps happening.",
     rateLimit: "Too many attempts in a short time. Wait a few minutes and try again.",
+    linkError: "That confirmation link has expired or was already used. Sign in, and if your email isn't confirmed, ask for a new link.",
+    resend: "Send the confirmation link again",
+    resent: "We sent a new link. Open the newest email, and check your spam folder.",
+    spamHint: "No email? Check your spam or promotions folder, or ask for a new link.",
   },
   dashboard: {
     morning: "Good morning",
